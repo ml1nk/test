@@ -12,6 +12,6 @@
   "devDependencies": {
     "istanbul": "latest",
 	  "mocha": "latest",
-    "coverall": "latest"
+    "coveralls": "latest"
   }
 }
