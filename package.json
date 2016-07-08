@@ -1,0 +1,17 @@
+{
+  "name": "test",
+  "version": "0.0.1",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "./node_modules/mocha/bin/mocha ./tests/*",
+    "test-travis": "./node_modules/istanbul/lib/cli.js cover ./node_modules/mocha/bin/_mocha -- -R spec ./tests/*"
+  },
+  "author": "Marcel Link",
+  "license": "MIT",
+  "devDependencies": {
+    "istanbul": "latest",
+	  "mocha": "latest",
+    "coverall": "latest"
+  }
+}
