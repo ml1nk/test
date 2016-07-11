@@ -4,7 +4,6 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js",
     "test": "./node_modules/mocha/bin/mocha ./tests/*",
     "test-travis": "./node_modules/istanbul/lib/cli.js cover ./node_modules/mocha/bin/_mocha -- -R spec ./tests/*"
   },
@@ -13,20 +12,20 @@
   "devDependencies": {
     "istanbul": "*",
 	  "mocha": "*",
-    "coveralls": "*"
+    "coveralls": "*",
+    "minifier": "*",
+    "fs":"*"
   },
   "dependencies": {
-    "git-rev": "*",
     "http": "*",
     "socket.io": "*",
     "express": "*",
-    "commander": "*"
+    "commander": "*",
+    "requirejs":"*"
   },
   "repository" : {
       "type" : "git",
       "url" : "https://github.com/ml1nk/test"
   },
-  "bin" : {
-    "nodeTest" : "./index.js"
-  }
+  "bin" : "./index.js"
 }
