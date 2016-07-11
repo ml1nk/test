@@ -4,14 +4,29 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "start": "node index.js",
     "test": "./node_modules/mocha/bin/mocha ./tests/*",
     "test-travis": "./node_modules/istanbul/lib/cli.js cover ./node_modules/mocha/bin/_mocha -- -R spec ./tests/*"
   },
   "author": "Marcel Link",
   "license": "MIT",
   "devDependencies": {
-    "istanbul": "latest",
-	  "mocha": "latest",
-    "coveralls": "latest"
+    "istanbul": "*",
+	  "mocha": "*",
+    "coveralls": "*"
+  },
+  "dependencies": {
+    "git-rev": "*",
+    "http": "*",
+    "socket.io": "*",
+    "express": "*",
+    "commander": "*"
+  },
+  "repository" : {
+      "type" : "git",
+      "url" : "https://github.com/ml1nk/test"
+  },
+  "bin" : {
+    "nodeTest" : "./index.js"
   }
 }
