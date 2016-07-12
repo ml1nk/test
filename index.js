@@ -7,8 +7,8 @@ requirejs(['server/cmd.js', 'express', 'http', 'socket.io'], function (cmd, expr
   var config = cmd(__dirname, process.argv);
 
   var app = express();
-  var http = http.Server(app);
-  var io = require('socket.io')(http);
+  http = http.Server(app);
+  io = io(http);
 
 
   io.on('connection', function(socket){

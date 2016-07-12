@@ -1,13 +1,5 @@
-var fs = require('fs');
-var walk = function(dir) {
-    var results = [];
-    var list = fs.readdirSync(dir);
-    list.forEach(function(file) {
-        file = dir + '/' + file
-        var stat = fs.statSync(file)
-        if (stat && stat.isDirectory()) results = results.concat(walk(file))
-        else results.push(file)
-    })
-    return results
-}
-console.log(walk("client/dev"));
+var requirejs = require('requirejs');
+requirejs.config({
+    nodeRequire: require
+});
+requirejs("server/minify.js")("client/dev","client/min");
