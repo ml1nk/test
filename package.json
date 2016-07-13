@@ -27,5 +27,5 @@
       "type" : "git",
       "url" : "https://github.com/ml1nk/test"
   },
-  "bin" : "./index.js"
+  "bin" : "./server.js"
 }

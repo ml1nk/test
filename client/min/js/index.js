@@ -1,1 +1,0 @@
-function baum(o){console.log(o)}requirejs.config({paths:{"socket.io":"/socket.io/socket.io"}});

@@ -1,9 +1,15 @@
 var requirejs = require('requirejs');
 requirejs.config({
-    nodeRequire: require
+    nodeRequire: require,
+    paths: {
+      "server": './amd',
+      "client": './client/amd'
+    }
 });
 
-requirejs(['server/cmd.js', 'express', 'http', 'socket.io'], function (cmd, express, http, io) {
+requirejs(['client/test']);
+
+requirejs(['server/cmd', 'express', 'http', 'socket.io'], function (cmd, express, http, io) {
   var config = cmd(__dirname, process.argv);
 
   var app = express();
@@ -22,9 +28,7 @@ requirejs(['server/cmd.js', 'express', 'http', 'socket.io'], function (cmd, expr
   app.get('/', function(req, res){
     res.sendFile(__dirname + '/client/index.html');
   });
-  app.use(express.static(__dirname + '/client/'+(config.dev ? "dev" : "min")));
-  app.use("/lib/",express.static(__dirname + '/client/lib'));
-
+  app.use(express.static(__dirname + '/client/'));
 
 
 });
