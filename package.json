@@ -12,16 +12,24 @@
   "devDependencies": {
     "istanbul": "*",
 	  "mocha": "*",
-    "coveralls": "*",
-    "minifier": "*",
-    "fs":"*"
+    "coveralls": "*"
   },
   "dependencies": {
     "http": "*",
     "socket.io": "*",
     "express": "*",
     "commander": "*",
-    "requirejs":"*"
+    "browserify-middleware":"*",
+    "socket.io-client":"*",
+    "browserify-shim":"*"
+  },
+  "browserify-shim": {
+    "./src/client/lib/jquery/bootstrap.js":  {
+      "depends" : [ "./src/client/lib/jquery/jquery.js:jQuery" ]
+    }
+  },
+  "browserify": {
+    "transform": [ "browserify-shim" ]
   },
   "repository" : {
       "type" : "git",
