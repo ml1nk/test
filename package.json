@@ -21,7 +21,8 @@
     "commander": "*",
     "browserify-middleware":"*",
     "socket.io-client":"*",
-    "browserify-shim":"*"
+    "browserify-shim":"*",
+    "mariasql":"*"
   },
   "browserify-shim": {
     "./src/client/lib/jquery/bootstrap.js":  {
