@@ -4,11 +4,11 @@ services:
     image: mariadb:latest
     container_name: mariadb
     volumes:
-      - "./db-data:/var/lib/mysql"
-      - "./db-config:/etc/mysql/conf.d"
+      - "./db-data:/var/lib/mysql:z"
+      - "./db-config:/etc/mysql/conf.d:z"
+      - "./db-init:/docker-entrypoint-initdb.d:z"
     restart: always
     environment:
-      MYSQL_DATABASE: test
       MYSQL_USER: root
       MYSQL_ALLOW_EMPTY_PASSWORD: 1
     ports:

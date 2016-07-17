@@ -22,7 +22,8 @@
     "browserify-middleware":"*",
     "socket.io-client":"*",
     "browserify-shim":"*",
-    "mariasql":"*"
+    "mariasql":"*",
+    "auto-loader":"*"
   },
   "browserify-shim": {
     "./src/client/lib/jquery/bootstrap.js":  {
