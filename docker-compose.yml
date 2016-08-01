@@ -4,9 +4,8 @@ services:
     image: mariadb:latest
     container_name: mariadb
     volumes:
-      - "./db-data:/var/lib/mysql:z"
-      - "./db-config:/etc/mysql/conf.d:z"
-      - "./db-init:/docker-entrypoint-initdb.d:z"
+      - "./mariadb/character.cnf:/etc/mysql/conf.d/character.cnf:z"
+      - "./mariadb/install.sql:/docker-entrypoint-initdb.d/install.sql:z"
     restart: always
     environment:
       MYSQL_USER: root
