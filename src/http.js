@@ -1,14 +1,36 @@
 var config = require("./config.js");
 var express = require("express");
+var session = require("express-session");
 exports.express = express();
-var http = require("http").Server(exports.app);
+var http = require("http").Server(exports.express);
 exports.io = require("socket.io")(http);
+var client = require('./mariasql.js');
+var sessionStore = new (require('./sql/sessionStore.js'))(client,604800000);
 
+/* Session Initialisierung */
+session  = session({
+    store: sessionStore,
+    secret: "my-secret",
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      maxAge: 604800000 // week
+    }
+});
+
+exports.express.use(session);
+exports.io.use(require("express-socket.io-session")(session, {
+    autoSave:true
+}));
+
+
+/* Statische Dateien ausgeben falls nötig*/
 if (config.static) {
     exports.express.use(express.static(__dirname + '/../public/'));
     exports.express.get('/index.js', require('browserify-middleware')(__dirname + '/client/startup.js'));
 }
 
+/* Routing vom rest vorbereiten */
 exports.rest = express.Router();
 exports.express.use('/rest', exports.rest);
 
@@ -20,12 +42,12 @@ exports.ready = new Promise(function(Resolve, Reject) {
     reject = Reject;
 });
 
-// rest/socket entries needs to be loaded before http server starts listening
+/* rest und socker Services einbinden */
 var auto = require('auto-loader');
 execute(auto.load(__dirname + '/rest'));
 execute(auto.load(__dirname + '/socket'));
 
-
+/* HTTP Port Lauschen */
 http.listen(config.port, function() {
     require('./shutdown.js').register(shutdown);
     console.log("startup", "http", "started");
@@ -35,17 +57,14 @@ http.listen(config.port, function() {
     reject();
 });
 
-
 function shutdown() {
     return new Promise(function(resolve) {
         http.close(function() {
-            console.log("shutdown", "mariasql", "stopped");
+            console.log("shutdown", "http", "stopped");
             resolve();
         });
     });
 }
-
-
 
 function execute(obj) {
     for (var k in obj) {

@@ -31,3 +31,16 @@ function shutdown() {
     c.end();
   });
 }
+
+/* Methoden für den Datenbankzugriff */
+exports.query = function(sql,data){
+  return new Promise(function(resolve, reject){
+    c.query(sql,data, function(err, rows) {
+      if (err) {
+        reject(err);
+      } else {
+        resolve(rows);
+      }
+    });
+  });
+};

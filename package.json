@@ -23,7 +23,11 @@
     "socket.io-client":"*",
     "browserify-shim":"*",
     "mariasql":"*",
-    "auto-loader":"*"
+    "auto-loader":"*",
+    "express-socket.io-session":"*",
+    "express-session":"*",
+    "connect-mariasql":"*",
+    "util" :"*"
   },
   "browserify-shim": {
     "./src/client/lib/jquery/bootstrap.js":  {

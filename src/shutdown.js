@@ -18,12 +18,17 @@ function exit() {
   }
 }
 
-/*
 process.on('uncaughtException', function(e) {
   console.log('Uncaught Exception...');
   console.log(e.stack);
   process.exit(99);
-}); */
+});
+
+process.on('unhandledRejection', function(e) {
+  console.log('Uncaught Exception...');
+  console.log(e.stack);
+  process.exit(99);
+});
 
 exports.register = function(callback) {
   callbacks.push(callback);
