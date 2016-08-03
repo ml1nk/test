@@ -1,6 +1,18 @@
+env:
+  - CXX=g++-4.8
 language: node_js
 node_js: "6.3"
-script: "npm run-script test-travis"
+before_script:
+  - cp "$TRAVIS_BUILD_DIR/docker/character.cnf" "/etc/mysql/conf.d/character.cnf"
+  - service mariadb restart
+script:
+  - "npm run-script test-travis"
 after_script: "cat ./coverage/lcov.info | ./node_modules/coveralls/bin/coveralls.js"
 addons:
  mariadb: '10.1'
+ apt:
+  sources:
+    - ubuntu-toolchain-r-test
+  packages:
+    - gcc-4.8
+    - g++-4.8
