@@ -1,3 +1,5 @@
+var database = require("../src/mariasql.js");
+
 var assert = require('assert');
 var fizzbuzz = require('../');
 

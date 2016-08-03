@@ -4,8 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "./node_modules/mocha/bin/mocha ./tests/*",
-    "test-travis": "./node_modules/istanbul/lib/cli.js cover ./node_modules/mocha/bin/_mocha -- -R spec ./tests/*"
+    "test": "./node_modules/mocha/bin/mocha ./tests/unit/*",
+    "test-travis": "./node_modules/istanbul/lib/cli.js cover ./node_modules/mocha/bin/_mocha -- -R spec ./tests/unit/*"
   },
   "author": "Marcel Link",
   "license": "MIT",
@@ -27,7 +27,8 @@
     "express-socket.io-session":"*",
     "express-session":"*",
     "connect-mariasql":"*",
-    "util" :"*"
+    "util" :"*",
+    "line-by-line":"*"
   },
   "browserify-shim": {
     "./src/client/lib/jquery/bootstrap.js":  {

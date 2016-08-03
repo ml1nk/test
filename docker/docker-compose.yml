@@ -4,12 +4,12 @@ services:
     image: mariadb:latest
     container_name: mariadb
     volumes:
-      - "./mariadb/character.cnf:/etc/mysql/conf.d/character.cnf:z"
-      - "./mariadb/install.sql:/docker-entrypoint-initdb.d/install.sql:z"
+      - "./character.cnf:/etc/mysql/conf.d/character.cnf:z"
     restart: always
     environment:
       MYSQL_USER: root
       MYSQL_ALLOW_EMPTY_PASSWORD: 1
+      MYSQL_DATABASE: test
     ports:
      - 3306:3306
   phpmyadmin:
