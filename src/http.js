@@ -49,18 +49,15 @@ execute(auto.load(__dirname + '/socket'));
 
 /* HTTP Port Lauschen */
 http.listen(config.port, function() {
-    require('./shutdown.js').register(shutdown);
-    console.log("startup", "http", "started");
+    require('./shutdown.js').register("http",shutdown);
     resolve();
 }).on("error", function(err) {
-    console.log("startup", "http", "failed", err);
-    reject();
+    reject(err);
 });
 
 function shutdown() {
     return new Promise(function(resolve) {
         http.close(function() {
-            console.log("shutdown", "http", "stopped");
             resolve();
         });
     });

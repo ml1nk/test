@@ -9,6 +9,7 @@ program
     .option('--db_user [user]', 'database user - defaults to root', String)
     .option('--db_pas [password]', 'database password - default is empty', String)
     .option('--db_data [database]', 'database name - default is test', String)
+    .option('--db_auto', 'autoupdate database when needed')
     .parse(process.argv);
 
 module.exports = {
@@ -21,5 +22,10 @@ module.exports = {
         user: program.db_user ? program.db_user : "root",
         pas: program.db_pas ? program.db_pas : "",
         data: program.db_data ? program.db_data : "test",
+        auto: program.db_auto ? true : false,
+    },
+    version: {
+      database: 1,
+      server: 2
     }
 };

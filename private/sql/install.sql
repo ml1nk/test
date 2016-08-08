@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: mariadb
--- Generation Time: Jul 17, 2016 at 06:19 PM
+-- Generation Time: Aug 08, 2016 at 10:13 PM
 -- Server version: 10.1.14-MariaDB-1~jessie
 -- PHP Version: 5.6.21
 
@@ -23,29 +23,35 @@ SET time_zone = "+00:00";
 -- --------------------------------------------------------
 
 --
--- Table structure for table `test`
+-- Table structure for table `version`
 --
 
-CREATE TABLE `test` (
-  `dssds` int(11) NOT NULL,
-  `ssdsdsa` int(11) NOT NULL,
-  `ssddsds` int(11) NOT NULL,
-  `ssdsdsda` int(11) NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC;
+CREATE TABLE `version` (
+  `id` int(11) NOT NULL,
+  `database` int(11) NOT NULL,
+  `server` int(11) NOT NULL,
+  `creation` bigint(20) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Table structure for table `sessions`
+-- Indexes for dumped tables
 --
 
-CREATE TABLE `sessions` (
-  `session_id` varchar(255) COLLATE utf8mb4_bin NOT NULL,
-  `expires` int(11) UNSIGNED NOT NULL,
-  `data` text COLLATE utf8mb4_bin
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC;
+--
+-- Indexes for table `version`
+--
+ALTER TABLE `version`
+  ADD PRIMARY KEY (`id`);
 
-ALTER TABLE `sessions`
-  ADD PRIMARY KEY (`session_id`);
+--
+-- AUTO_INCREMENT for dumped tables
+--
 
+--
+-- AUTO_INCREMENT for table `version`
+--
+ALTER TABLE `version`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=0;
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
 /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;

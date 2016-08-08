@@ -1,19 +1,23 @@
-var callbacks = [];
+var services = [];
 
 new Promise(function(resolve) {
   process.on('SIGTERM', resolve);
   process.on('SIGINT', resolve);
   process.on('exit', resolve);
 }).then(function(){
-  console.log("shutdown","started");
+  console.log("shutdown","start");
   exit();
 });
 
 function exit() {
-  if(callbacks.length>0) {
-    callbacks.pop()().then(exit);
+  if(services.length>0) {
+    var service = services.pop();
+    console.log("shutdown","stop",service.name);
+    service.callback().then(function(){
+      exit();
+    });
   } else {
-    console.log("shutdown","finished");
+    console.log("shutdown","complete");
     process.exit(0);
   }
 }
@@ -30,6 +34,6 @@ process.on('unhandledRejection', function(e) {
   process.exit(99);
 });
 
-exports.register = function(callback) {
-  callbacks.push(callback);
+exports.register = function(name, callback) {
+  services.push({ name : name, callback : callback});
 };

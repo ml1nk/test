@@ -27,8 +27,8 @@
     "express-socket.io-session":"*",
     "express-session":"*",
     "connect-mariasql":"*",
-    "util" :"*",
-    "line-by-line":"*"
+    "line-by-line":"*",
+    "http-shutdown":"*"
   },
   "browserify-shim": {
     "./src/client/lib/jquery/bootstrap.js":  {

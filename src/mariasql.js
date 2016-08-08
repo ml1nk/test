@@ -5,12 +5,10 @@ var c = new client();
 
 exports.ready = new Promise(function(resolve, reject) {
     c.on("error", function(err) {
-        console.log("startup", "mariasql", "failed", err);
-        reject();
+        reject(err);
     });
     c.on("ready", function() {
-        require('./shutdown.js').register(shutdown);
-        console.log("startup", "mariasql", "started");
+        require('./shutdown.js').register("mariasql",shutdown);
         resolve();
     });
 });
@@ -25,7 +23,6 @@ c.connect({
 function shutdown() {
     return new Promise(function(resolve) {
         c.on("close", function() {
-            console.log("shutdown", "mariasql", "stopped");
             resolve();
         });
         c.end();
@@ -47,7 +44,7 @@ exports.query = function(sql, data) {
 
 /* SQL Dateien aus dem Dateisystem importieren */
 exports.import = function(file) {
-    console.log("mariasql", "import", file, "started");
+    console.log("mariasql", "import", file);
     return new Promise(function(resolve, reject) {
         var lr = new(require('line-by-line'))(
             __dirname + "/../private/sql/" + file, {
@@ -81,7 +78,6 @@ exports.import = function(file) {
             }
         });
         lr.on('end', function() {
-            console.log("mariasql", "import", file, "finished");
             resolve();
         });
     });
