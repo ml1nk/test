@@ -29,7 +29,7 @@ process.on('uncaughtException', function(e) {
 });
 
 process.on('unhandledRejection', function(e) {
-  console.log('Uncaught Exception...');
+  console.log('Uncaught Rejection...');
   console.log(e.stack);
   process.exit(99);
 });

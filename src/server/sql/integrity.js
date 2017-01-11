@@ -1,12 +1,12 @@
 module.exports = class {
-    constructor(con,config) {
+    constructor(client,config) {
       this.config = config;
-      this.con = con;
+      this.client = client;
       this._ready = this.hasTables().then(function(hasTables){
           if(!hasTables) {
             // Installation + Erster Eintrag
             console.info("sql/integrity","install");
-            return this.con.import("install.sql").then(function(){
+            return this.client.import("install.sql").then(function(){
                 return this.updateVersionInfo(this.config.version);
             }.bind(this));
           } else {
@@ -30,8 +30,8 @@ module.exports = class {
      */
     hasTables() {
       return new Promise(function(resolve, reject){
-        this.con.query("show tables").then(function(rows) {
-          resolve(rows.length>0);
+        this.client.query("show tables").then(function(rows) {
+          resolve(rows.rows.length>0);
         });
       }.bind(this));
     }
@@ -41,11 +41,11 @@ module.exports = class {
      */
     getLastVersion() {
       return new Promise(function(resolve, reject){
-        this.con.query("SELECT `database`, `server` from version ORDER BY id DESC LIMIT 1").then(function(rows) {
-          if(rows.length===0) {
+        this.client.query("SELECT `database`, `server` from version ORDER BY id DESC LIMIT 1").then(function(result) {
+          if(result.rows.length===0) {
             reject("Missing row in the table 'version'. The database is probably broken.");
           } else {
-            resolve(rows[0]);
+            resolve(result.rows[0]);
           }
         });
       }.bind(this));
@@ -89,7 +89,7 @@ module.exports = class {
         resolve();
         return;
       }
-      this.con.import("update/"+(fromVersion++)+"-"+fromVersion+".sql").then(function(){
+      this.client.import("update/"+(fromVersion++)+"-"+fromVersion+".sql").then(function(){
         this._autoupdate(resolve,fromVersion,toVersion);
       }.bind(this));
     }
@@ -100,7 +100,7 @@ module.exports = class {
      */
     updateVersionInfo(version) {
       return new Promise(function(resolve, reject){
-        this.con.query("INSERT INTO version (`database`,`server`,`creation`) VALUES(:database,:server,:creation)",{
+        this.client.query("INSERT INTO version (`database`,`server`,`creation`) VALUES(:database,:server,:creation)",{
           database : version.database,
           server : version.server,
           creation :  Math.round((new Date()).getTime()/1000)

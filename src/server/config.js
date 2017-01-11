@@ -1,6 +1,6 @@
 var program = require("commander");
 program
-    .version(require(__dirname + '/../package').version)
+    .version(require(__dirname + '/../../package').version)
     .option('--dev', 'developer mode')
     .option('--no-static', 'disable serving static files')
     .option('--port [num]', 'server port - defaults to 3000', Number)
@@ -12,7 +12,7 @@ program
     .option('--db_auto', 'autoupdate database when needed')
     .parse(process.argv);
 
-module.exports = {
+var config = module.exports = {
     dev: program.dev ? true : false,
     port: program.port ? program.port : 3000,
     static: program["no-static"] ? false : true,
@@ -29,3 +29,9 @@ module.exports = {
       server: 2
     }
 };
+
+if(config.dev) {
+  process.env.NODE_ENV = 'production';
+} else {
+  process.env.NODE_ENV = 'development';
+}

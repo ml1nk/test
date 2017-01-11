@@ -1,10 +1,11 @@
+sudo: required
 env:
   - CXX=g++-4.8
 language: node_js
 node_js: "6.3"
 before_script:
-  - cp "$TRAVIS_BUILD_DIR/docker/character.cnf" "/etc/mysql/conf.d/character.cnf"
-  - service mariadb restart
+  - sudo cp "$TRAVIS_BUILD_DIR/docker/character.cnf" "/etc/mysql/conf.d/character.cnf"
+  - sudo service mariadb restart
 script:
   - "npm run-script test-travis"
 after_script: "cat ./coverage/lcov.info | ./node_modules/coveralls/bin/coveralls.js"

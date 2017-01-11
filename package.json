@@ -10,37 +10,48 @@
   "author": "Marcel Link",
   "license": "MIT",
   "devDependencies": {
+    "babel-core": "*",
+    "babel-loader": "*",
+    "babel-preset-es2015": "^6.16.0",
+    "babel-preset-react": "^6.16.0",
+    "coveralls": "*",
+    "css-loader": "^0.25.0",
+    "gutil": "*",
     "istanbul": "*",
-	  "mocha": "*",
-    "coveralls": "*"
+    "mocha": "*",
+    "style-loader": "^0.13.1",
+    "url-loader" : "*",
+    "file-loader" : "*",
+    "webpack": "*",
+    "webpack-combine-loaders": "^2.0.0",
+    "eventemitter3" : "^2.0.2",
+    "react": "^15.3.2",
+    "react-dom": "^15.3.2",
+    "redux" : "*",
+    "react-redux" : "*",
+    "jquery" : "^3.1.1"
   },
   "dependencies": {
-    "http": "*",
-    "socket.io": "*",
-    "express": "*",
+    "auto-loader": "*",
     "commander": "*",
-    "browserify-middleware":"*",
-    "socket.io-client":"*",
-    "browserify-shim":"*",
-    "mariasql":"*",
-    "auto-loader":"*",
-    "express-socket.io-session":"*",
-    "express-session":"*",
-    "connect-mariasql":"*",
-    "line-by-line":"*",
-    "http-shutdown":"*"
-  },
-  "browserify-shim": {
-    "./src/client/lib/jquery/bootstrap.js":  {
-      "depends" : [ "./src/client/lib/jquery/jquery.js:jQuery" ]
-    }
+    "express": "*",
+    "express-session": "*",
+    "express-socket.io-session": "*",
+    "http": "*",
+    "http-shutdown": "*",
+    "line-by-line": "*",
+    "socket.io": "*",
+    "socket.io-client": "*",
+    "mariasql": "*"
   },
   "browserify": {
-    "transform": [ "browserify-shim" ]
+    "transform": [
+      "browserify-shim"
+    ]
   },
-  "repository" : {
-      "type" : "git",
-      "url" : "https://github.com/ml1nk/test"
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ml1nk/test"
   },
-  "bin" : "./server.js"
+  "bin": "./server.js"
 }

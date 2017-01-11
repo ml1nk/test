@@ -2,7 +2,7 @@ var config = require("./config.js");
 var express = require("express");
 var session = require("express-session");
 exports.express = express();
-var http = require("http").Server(exports.express);
+var http = require('http-shutdown')(require("http").Server(exports.express));
 exports.io = require("socket.io")(http);
 var client = require('./mariasql.js');
 var sessionStore = new (require('./sql/sessionStore.js'))(client,604800000);
@@ -26,14 +26,12 @@ exports.io.use(require("express-socket.io-session")(session, {
 
 /* Statische Dateien ausgeben falls nötig*/
 if (config.static) {
-    exports.express.use(express.static(__dirname + '/../public/'));
-    exports.express.get('/index.js', require('browserify-middleware')(__dirname + '/client/startup.js'));
+    exports.express.use(express.static(__dirname + '/../../public/'));
 }
 
 /* Routing vom rest vorbereiten */
 exports.rest = express.Router();
 exports.express.use('/rest', exports.rest);
-
 
 var resolve;
 var reject;
@@ -57,7 +55,7 @@ http.listen(config.port, function() {
 
 function shutdown() {
     return new Promise(function(resolve) {
-        http.close(function() {
+        http.shutdown(function() {
             resolve();
         });
     });
