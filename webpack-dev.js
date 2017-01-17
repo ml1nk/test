@@ -8,7 +8,7 @@ var combineLoaders = require("webpack-combine-loaders");
 var compiler = webpack({
   cache: true,
   devtool: "source-map",
-  entry: path.resolve(__dirname, "src/client/index.jsx"),
+  entry: path.resolve(__dirname, "src/client/index.js"),
   output: {
     path: path.resolve(__dirname, "public"),
     filename: 'index.js'
@@ -24,6 +24,10 @@ var compiler = webpack({
         compact: false,
         cacheDirectory: true
       }
+    },
+    {
+     test: /\.json?$/,
+     loader: 'json'
     },
     {
       test: /\.css$/,

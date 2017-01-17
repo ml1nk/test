@@ -1,5 +1,6 @@
 var PIXI = require("pixi.js");
 var playfield = require("../../shared/playfield.js");
+var fields = require("../../shared/fields.json");
 
 exports.create = function(renderer, data) {
   var i,p;
@@ -47,15 +48,7 @@ function _center(fields,x,y) {
 }
 
 function _fieldIdToTexture(id) {
-  if(id===0) {
-    return PIXI.loader.resources["images/treasureHunter.json"].textures["door.png"];
-  } else if(id===1) {
-    return PIXI.loader.resources["images/treasureHunter.json"].textures["explorer.png"];
-  } else if(id===2) {
-    return PIXI.loader.resources["images/treasureHunter.json"].textures["blob.png"];
-  } else {
-    return PIXI.loader.resources["images/treasureHunter.json"].textures["dungeon.png"];
-  }
+  return PIXI.loader.resources[fields[id+1].texture].texture;
 }
 
 function _addSprite(stage,x,y,id) {
