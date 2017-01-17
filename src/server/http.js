@@ -41,9 +41,10 @@ exports.ready = new Promise(function(Resolve, Reject) {
 });
 
 /* rest und socker Services einbinden */
-var auto = require('auto-loader');
-execute(auto.load(__dirname + '/rest'));
-execute(auto.load(__dirname + '/socket'));
+//var auto = require('auto-loader');
+//execute(auto.load(__dirname + '/rest'));
+//execute(auto.load(__dirname + '/socket'));
+require("./socket/startup.js");
 
 /* HTTP Port Lauschen */
 http.listen(config.port, function() {
