@@ -1,7 +1,7 @@
 var PIXI = require("pixi.js");
 var fields = require("../../shared/fields.json");
 
-var renderer = PIXI.autoDetectRenderer(window.innerWidth, window.innerHeight);
+var renderer = new PIXI.WebGLRenderer(window.innerWidth, window.innerHeight);
 renderer.view.style.position = "absolute";
 renderer.view.style.display = "block";
 renderer.autoResize = true;

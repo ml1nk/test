@@ -1,17 +1,36 @@
 var field = require("./test.json");
+
+var width = field.length;
+var height = field[0].length;
+
+var playfield = require("../../shared/playfield.js");
 var players = {};
 var playerCount = 0;
 
-var lastTick, tickPlayerData, tickPlayerCount;
-tickReset();
+var lastTick = Date.now();
+var tickPlayerData = {};
+var tickPlayerCount = 0;
 
-exports.add = (socket,x,y,speed,sight,subField) => {
+exports.add = (socket,fn) => {
+
+  var x =  5;
+  var y = 2;
+  var speed = 5;
+  var sight = 2;
+
+  var subField = new Array(width);
+  for (var i = 0; i < width; i++) {
+    subField[i] = new Array(height).fill(0);
+  }
+
   players[socket.id] = {
     socket : socket,
-    x : x,
-    y : y,
-    speed : speed,
-    sight : sight,
+    stats : {
+      x : x,
+      y : y,
+      speed : speed,
+      sight : sight
+    },
     subField : subField
   };
   playerCount++;
@@ -21,20 +40,33 @@ exports.add = (socket,x,y,speed,sight,subField) => {
       fn : fn
     };
     tickPlayerCount++;
+    console.log(tickPlayerCount,playerCount);
     if(tickPlayerCount == playerCount) {
       tickReady();
     }
   });
+  fn({
+    stats : players[socket.id].stats,
+    width : width,
+    height : height
+  });
 };
 
 exports.remove = (id) => {
+  if(!players.hasOwnProperty(id)) {
+    return;
+  }
   playerCount--;
   delete players[id];
+  if(tickPlayerData.hasOwnProperty(id)) {
+    delete tickPlayerData[id];
+    tickPlayerCount--;
+  }
 };
 
 function tickReady() {
   var past = Date.now()-lastTick;
-  if(past<=1000) {
+  if(past<=200) {
     setTimeout(tick,past);
   } else {
     console.warn("tick take too long",past);
@@ -42,16 +74,25 @@ function tickReady() {
   }
 }
 
-function tickReset() {
+function tick() {
   lastTick = Date.now();
+
+  for(var key in tickPlayerData) {
+    if(tickPlayerData[key].data == "left") {
+      players[key].stats.x--;
+    } else if(tickPlayerData[key].data == "right") {
+      players[key].stats.x++;
+    } else if(tickPlayerData[key].data == "top") {
+      players[key].stats.y--;
+    } else if(tickPlayerData[key].data == "bottom") {
+      players[key].stats.y++;
+    }
+  }
+
+  for(var key in tickPlayerData) {
+    tickPlayerData[key].fn(playfield.getDiff(width, height, players[key].stats.x, players[key].stats.y, players[key].stats.sight, field, players[key].subField));
+  }
+
   tickPlayerData = {};
   tickPlayerCount = 0;
-}
-
-
-function tick() {
-  tickReset();
-  
-
-
 }

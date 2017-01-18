@@ -15,3 +15,24 @@ exports.getView = (width,height,x,y,range,callback) => {
     }
   }
 };
+
+exports.getDiff = (width, height, x, y, range, field, subField) => {
+  var diff = [];
+  exports.getView(width, height, x, y, range, (curX, curY) => {
+    if(field[curX][curY] != subField[curX][curY]) {
+      subField[curX][curY] = field[curX][curY];
+      diff.push({
+        x : curX,
+        y : curY,
+        id : field[curX][curY]
+      });
+    }
+  });
+  return diff;
+}
+
+exports.applyDiff = (field, diff) => {
+  for(var i=0; i<diff.length; i++) {
+    field[diff[i].x][diff[i].y] = diff[i].id;
+  }
+}

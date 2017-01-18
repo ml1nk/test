@@ -12,25 +12,16 @@ exports.create = function(renderer, data) {
     field[i] = new Array(data.height);
   }
 
-  i = 0;
-  playfield.getView(data.width, data.height, data.x, data.y, data.range, (curX, curY) => {
-    field[curX][curY] = _addField(fieldContainer,curX,curY,data.view[i]);
-    i++;
-  });
-
   for(i=0; i<data.width;i++) {
     for(p=0; p<data.height; p++) {
-      if(typeof field[i][p] === "undefined") {
         field[i][p] = _addField(fieldContainer,i,p,0);
-        field[i][p].filters[0].blur = 10;
-      }
     }
   }
 
   var stage = new PIXI.Container();
   stage.addChild(fieldContainer);
 
-  _center(fieldContainer, data.x, data.y);
+  _center(fieldContainer, data.stats.x, data.stats.y);
 
   stage.x = Math.round(renderer.width/2);
   stage.y = Math.round(renderer.height/2);
@@ -64,3 +55,7 @@ function _addField(stage,x,y,id) {
   stage.addChild(field);
   return field;
 }
+
+exports.updateField = (sprite,id) => {
+  sprite.texture = _fieldIdToTexture(id);
+};
