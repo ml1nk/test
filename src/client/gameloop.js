@@ -1,25 +1,19 @@
 const playfield = require("./pixi/playfield.js");
 const keyboard = require("./keyboard.js");
 
-var players = {};
+var socket;
 
-module.exports = (renderer, stage, field, socket, stats) => {
-  _tick(stage, field, socket, stats,renderer);
+module.exports = (_socket) => {
+  socket = _socket;
+  _tick();
   requestAnimationFrame(repeat);
   function repeat() {
-    _gameloop(renderer, stage);
+    playfield.render();
     requestAnimationFrame(repeat);
   }
 };
 
-
-function _gameloop(renderer, stage) {
-  //var test = Date.now();
-  renderer.render(stage);
-  //console.log("render",Date.now()-test);
-}
-
-function _tick(stage, field, socket, stats) {
+function _tick() {
 
   var output = "";
   var lastdown = keyboard.key();
@@ -40,16 +34,12 @@ function _tick(stage, field, socket, stats) {
     var i;
 
     for(i=0; i<tick.fieldUpdates.length; i++) {
-      playfield.updateField(field[tick.fieldUpdates[i].x][tick.fieldUpdates[i].y],tick.fieldUpdates[i].type);
+      playfield.updateField(tick.fieldUpdates[i].x,tick.fieldUpdates[i].y,tick.fieldUpdates[i].type);
     }
 
     for(i=0; i<tick.playerUpdates.length; i++) {
-      if(!players.hasOwnProperty(tick.playerUpdates[i].playerId)) {
-        players[tick.playerUpdates[i].playerId] = playfield.addPlayer(stage, tick.playerUpdates[i].stats.x, tick.playerUpdates[i].stats.y);
-      } else {
-        playfield.updatePlayer(players[tick.playerUpdates[i].playerId], tick.playerUpdates[i].stats.x, tick.playerUpdates[i].stats.y);
-      }
+      playfield.updatePlayer(tick.playerUpdates[i]);
     }
-    _tick(stage, field, socket, stats);
+    _tick();
   });
 }

@@ -7,6 +7,7 @@ var combineLoaders = require("webpack-combine-loaders");
 
 var compiler = webpack({
   cache: true,
+  debug: true,
   devtool: "source-map",
   entry: path.resolve(__dirname, "src/client/index.js"),
   output: {

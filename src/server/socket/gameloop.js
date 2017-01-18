@@ -71,7 +71,8 @@ exports.remove = (id) => {
 function tickReady() {
   var past = Date.now()-lastTick;
   if(past<=200) {
-    setTimeout(tick,past);
+    console.log("tick working", past);
+    setTimeout(tick,200-past);
   } else {
     console.warn("tick take too long",past);
     tick();

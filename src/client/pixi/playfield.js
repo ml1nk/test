@@ -1,80 +1,120 @@
 const PIXI = require("pixi.js");
 const playfield = require("../../shared/playfield.js");
-const fields = require("../../shared/fields.json");
-const res = 64;
+const fieldTypes = require("../../shared/fieldTypes.json");
+const resolution = 64;
+const blurlevel = 20;
+const renderer = _renderer();
+const stage = new PIXI.Container();
+const stageField = new PIXI.Container();
+const players = {};
 
-exports.create = function(renderer, data) {
-  var i,p;
-  var fieldContainer = new PIXI.Container();
+var fieldSprite, fieldType, width, height, myPlayerId;
+stage.addChild(stageField);
+_centerStage();
 
-  var field = new Array(data.width);
-  for (i = 0; i < data.width; i++) {
-    field[i] = new Array(data.height);
+exports.ready = _loadTextures();
+exports.start = _start;
+
+function _renderer() {
+  // WebGLRenderer CanvasRenderer
+  var renderer = new PIXI.WebGLRenderer(window.innerWidth, window.innerHeight);
+  renderer.view.style.position = "absolute";
+  renderer.view.style.display = "block";
+  renderer.autoResize = true;
+  document.body.appendChild(renderer.view);
+  return renderer;
+}
+
+function _loadTextures() {
+  var textures = [];
+  for(var i=0; i<fieldTypes.length; i++) {
+    textures.push(fieldTypes[i].texture);
   }
+  textures.push("images/explorer.png");
+  return new Promise((resolve, reject) => {
+    PIXI.loader.add(textures).load(() => { resolve(); });
+  });
+}
 
-  for(i=0; i<data.width;i++) {
-    for(p=0; p<data.height; p++) {
-        field[i][p] = _addField(fieldContainer,i,p);
+function _start(_width, _height, _myPlayerId) {
+  var i, p;
+  fieldSprite = [];
+  fieldType = [];
+  for (i = 0; i < _width; i++) {
+    fieldSprite.push(new Array(_height));
+    fieldType.push(new Array(_height).fill(0));
+  }
+  for(i=0; i<_width;i++) {
+    for(p=0; p<_height; p++) {
+        fieldSprite[i][p] = _addField(i,p);
     }
   }
+  width = _width;
+  height = _height;
+  myPlayerId = _myPlayerId;
+}
 
-  var stage = new PIXI.Container();
-  stage.addChild(fieldContainer);
-
+function _centerStage() {
   stage.x = Math.round(renderer.width/2);
   stage.y = Math.round(renderer.height/2);
-
-  return {
-    stage : stage,
-    field : field
-  };
-};
-
-exports.center = (stage,x,y) => {
-  var fieldContainer = stage.children[0];
-  fieldContainer.x = -(res/2)-x*res;
-  fieldContainer.y = -(res/2)-y*res;
-};
-
-function _fieldIdToTexture(id) {
-  return PIXI.loader.resources[fields[id].texture].texture;
 }
 
-function _addField(stage,x,y) {
-  var field = new PIXI.Sprite(
-    _fieldIdToTexture(0)
+function _centerPlayer(x,y) {
+  stageField.x = -(resolution/2)-x*resolution;
+  stageField.y = -(resolution/2)-y*resolution;
+}
+
+function _addField(x,y) {
+  var sprite = new PIXI.Sprite(
+    PIXI.loader.resources[fieldTypes[0].texture].texture
   );
-  field.type = 0;
-  field.x = x*res;
-  field.y = y*res;
-  field.width = res;
-  field.height = res;
-  field.filters = [new PIXI.filters.BlurFilter()];
-  field.filters[0].blur = 0;
-  stage.addChild(field);
-  return field;
+  sprite.x = x*resolution;
+  sprite.y = y*resolution;
+  sprite.width = resolution;
+  sprite.height = resolution;
+//  sprite.filters = [new PIXI.filters.BlurFilter()];
+//  sprite.filters[0].blur = blurlevel;
+  stageField.addChild(sprite);
+  return sprite;
 }
 
-exports.updateField = (sprite,type) => {
-  sprite.texture = _fieldIdToTexture(type);
-  sprite.type = type;
+exports.updateField = (x,y,type) => {
+  fieldSprite[x][y].texture = PIXI.loader.resources[fieldTypes[type].texture].texture;
+  fieldType[x][y] = type;
 };
 
-exports.addPlayer = (stage, x, y) => {
+exports.updatePlayer = (player) => {
+  if(!players.hasOwnProperty(player.playerId)) {
+    players[player.playerId] = _addPlayer(player.stats.x, player.stats.y);
+  } else {
+    _updatePlayer(player.playerId,player.stats.x, player.stats.y);
+  }
+  if(player.playerId === myPlayerId) {
+    _centerPlayer(player.stats.x, player.stats.y);
+  }
+};
+
+function _addPlayer(x, y) {
   var player = new PIXI.Sprite(PIXI.loader.resources["images/explorer.png"].texture);
-  player.x = x*res;
-  player.y = y*res;
-  player.width = res;
-  player.height = res;
-  stage.children[0].addChild(player);
+  player.x = x*resolution;
+  player.y = y*resolution;
+  player.width = resolution;
+  player.height = resolution;
+  stageField.addChild(player);
   return player;
-};
+}
 
-exports.updatePlayer = (player, x, y) => {
-  player.x = x*res;
-  player.y = y*res;
-};
-
+function _updatePlayer(playerId, x, y) {
+  players[playerId].x = x*resolution;
+  players[playerId].y = y*resolution;
+}
+/*
 exports.removePlayer = (stage, player) => {
   stage.removeChild(player);
+};*/
+
+exports.render = () => {
+  var time = Date.now();
+  renderer.render(stage);
+  console.log("time",Date.now()-time);
 };
