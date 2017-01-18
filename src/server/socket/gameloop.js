@@ -6,6 +6,7 @@ var height = field[0].length;
 var playfield = require("../../shared/playfield.js");
 var players = {};
 var playerCount = 0;
+var playerIdCounter = 0;
 
 var lastTick = Date.now();
 var tickPlayerData = {};
@@ -31,25 +32,28 @@ exports.add = (socket,fn) => {
       speed : speed,
       sight : sight
     },
-    subField : subField
+    playerId : playerIdCounter,
+    subField : subField,
+    subPlayers : {}
   };
   playerCount++;
   socket.on("tick",(data,fn) => {
+    tickPlayerCount++;
     tickPlayerData[socket.id] = {
       data : data,
       fn : fn
     };
-    tickPlayerCount++;
     console.log(tickPlayerCount,playerCount);
     if(tickPlayerCount == playerCount) {
       tickReady();
     }
   });
   fn({
-    stats : players[socket.id].stats,
+    playerId : playerIdCounter,
     width : width,
     height : height
   });
+  playerIdCounter++;
 };
 
 exports.remove = (id) => {
@@ -74,10 +78,13 @@ function tickReady() {
   }
 }
 
+
+
 function tick() {
+  var key;
   lastTick = Date.now();
 
-  for(var key in tickPlayerData) {
+  for(key in tickPlayerData) {
     if(tickPlayerData[key].data == "left") {
       players[key].stats.x--;
     } else if(tickPlayerData[key].data == "right") {
@@ -89,8 +96,18 @@ function tick() {
     }
   }
 
-  for(var key in tickPlayerData) {
-    tickPlayerData[key].fn(playfield.getDiff(width, height, players[key].stats.x, players[key].stats.y, players[key].stats.sight, field, players[key].subField));
+  for(key in tickPlayerData) {
+    var tickData = {
+      fieldUpdates : playfield.getDiff(width, height, players[key].stats.x, players[key].stats.y, players[key].stats.sight, field, players[key].subField),
+    };
+    tickData.playerUpdates = [];
+    for(var socketid in players) {
+      tickData.playerUpdates.push({
+        stats : players[socketid].stats,
+        playerId : players[socketid].playerId
+      });
+    }
+    tickPlayerData[key].fn(tickData);
   }
 
   tickPlayerData = {};

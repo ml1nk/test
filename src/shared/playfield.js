@@ -24,15 +24,15 @@ exports.getDiff = (width, height, x, y, range, field, subField) => {
       diff.push({
         x : curX,
         y : curY,
-        id : field[curX][curY]
+        type : field[curX][curY]
       });
     }
   });
   return diff;
-}
+};
 
 exports.applyDiff = (field, diff) => {
   for(var i=0; i<diff.length; i++) {
     field[diff[i].x][diff[i].y] = diff[i].id;
   }
-}
+};

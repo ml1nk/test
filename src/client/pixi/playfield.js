@@ -14,14 +14,12 @@ exports.create = function(renderer, data) {
 
   for(i=0; i<data.width;i++) {
     for(p=0; p<data.height; p++) {
-        field[i][p] = _addField(fieldContainer,i,p,0);
+        field[i][p] = _addField(fieldContainer,i,p);
     }
   }
 
   var stage = new PIXI.Container();
   stage.addChild(fieldContainer);
-
-  _center(fieldContainer, data.stats.x, data.stats.y);
 
   stage.x = Math.round(renderer.width/2);
   stage.y = Math.round(renderer.height/2);
@@ -32,20 +30,21 @@ exports.create = function(renderer, data) {
   };
 };
 
-function _center(fields,x,y) {
-  fields.x = -(res/2)-x*res;
-  fields.y = -(res/2)-y*res;
-}
+exports.center = (stage,x,y) => {
+  var fieldContainer = stage.children[0];
+  fieldContainer.x = -(res/2)-x*res;
+  fieldContainer.y = -(res/2)-y*res;
+};
 
 function _fieldIdToTexture(id) {
   return PIXI.loader.resources[fields[id].texture].texture;
 }
 
-function _addField(stage,x,y,id) {
+function _addField(stage,x,y) {
   var field = new PIXI.Sprite(
-    _fieldIdToTexture(id)
+    _fieldIdToTexture(0)
   );
-  field.fieldId = id;
+  field.type = 0;
   field.x = x*res;
   field.y = y*res;
   field.width = res;
@@ -56,6 +55,26 @@ function _addField(stage,x,y,id) {
   return field;
 }
 
-exports.updateField = (sprite,id) => {
-  sprite.texture = _fieldIdToTexture(id);
+exports.updateField = (sprite,type) => {
+  sprite.texture = _fieldIdToTexture(type);
+  sprite.type = type;
+};
+
+exports.addPlayer = (stage, x, y) => {
+  var player = new PIXI.Sprite(PIXI.loader.resources["images/explorer.png"].texture);
+  player.x = x*res;
+  player.y = y*res;
+  player.width = res;
+  player.height = res;
+  stage.children[0].addChild(player);
+  return player;
+};
+
+exports.updatePlayer = (player, x, y) => {
+  player.x = x*res;
+  player.y = y*res;
+};
+
+exports.removePlayer = (stage, player) => {
+  stage.removeChild(player);
 };
