@@ -1,4 +1,4 @@
-var renderer = require("./pixi/index.js");
+var renderer = require("./pixi/startup.js");
 var playfield = require("./pixi/playfield.js");
 
 var io = require("socket.io-client")();

@@ -12,5 +12,6 @@ module.exports = new Promise((resolve, reject) => {
   for(var i=0; i<fields.length; i++) {
     textures.push(fields[i].texture);
   }
+  textures.push("images/explorer.png");
   PIXI.loader.add(textures).load(() => { resolve(renderer); });
 });
