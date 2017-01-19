@@ -28,7 +28,10 @@ function _renderer() {
 function _loadTextures() {
   var textures = [];
   for(var i=0; i<fieldTypes.length; i++) {
-    textures.push(fieldTypes[i].texture);
+    if(i!=0) {
+      textures.push(fieldTypes[i].inside.texture);      
+    }
+    textures.push(fieldTypes[i].outside.texture);
   }
   textures.push("images/explorer.png");
   return new Promise((resolve, reject) => {
@@ -55,18 +58,18 @@ function _start(_width, _height, _myPlayerId) {
 }
 
 function _centerStage() {
-  stage.x = Math.round(renderer.width/2);
-  stage.y = Math.round(renderer.height/2);
+  //stage.x = Math.round(renderer.width/2);
+  //stage.y = Math.round(renderer.height/2);
 }
 
 function _centerPlayer(x,y) {
-  stageField.x = -(resolution/2)-x*resolution;
-  stageField.y = -(resolution/2)-y*resolution;
+  stageField.x = Math.round(renderer.width/2)-(resolution/2)-x*resolution;
+  stageField.y = Math.round(renderer.height/2)-(resolution/2)-y*resolution;
 }
 
 function _addField(x,y) {
   var sprite = new PIXI.Sprite(
-    PIXI.loader.resources[fieldTypes[0].texture].texture
+    PIXI.loader.resources[fieldTypes[0].outside.texture].texture
   );
   sprite.x = x*resolution;
   sprite.y = y*resolution;
@@ -78,8 +81,8 @@ function _addField(x,y) {
   return sprite;
 }
 
-exports.updateField = (x,y,type) => {
-  fieldSprite[x][y].texture = PIXI.loader.resources[fieldTypes[type].texture].texture;
+exports.updateField = (x,y,type,inside) => {
+  fieldSprite[x][y].texture = PIXI.loader.resources[fieldTypes[type][inside ? "inside" : "outside"].texture].texture;
   fieldType[x][y] = type;
 };
 

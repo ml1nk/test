@@ -4,31 +4,51 @@
     "right" : 1,
     "top" : 1,
     "bottom" : 1,
-    "texture" : "images/unknown.png",
-    "rotation" : 0
+    "outside" : {
+      "texture" : "images/unknown.png",
+      "rotation" : 0
+    }
   },
   {
     "left" : 1,
     "right" : 1,
     "top" : 1,
     "bottom" : 1,
-    "texture" : "images/stone.png",
-    "rotation" : 0
+    "inside" : {
+      "texture" : "images/wood.png",
+      "rotation" : 0
+    },
+    "outside" : {
+      "texture" : "images/wood-old.png",
+      "rotation" : 0
+    }
   },
   {
     "left" : 1,
     "right" : 1,
     "top" : 1,
     "bottom" : 1,
-    "texture" : "images/wood.png",
-    "rotation" : 0
+    "inside" : {
+      "texture" : "images/stone.png",
+      "rotation" : 0
+    },
+    "outside" : {
+      "texture" : "images/stone-old.png",
+      "rotation" : 0
+    }
   },
   {
     "left" : 1,
     "right" : 1,
     "top" : 1,
     "bottom" : 1,
-    "texture" : "images/gras.png",
-    "rotation" : 0
+    "inside" : {
+      "texture" : "images/gras.png",
+      "rotation" : 0
+    },
+    "outside" : {
+      "texture" : "images/gras-old.png",
+      "rotation" : 0
+    }
   }
 ]
