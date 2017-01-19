@@ -1,12 +1,14 @@
 const PIXI = require("pixi.js");
 const playfield = require("../../shared/playfield.js");
 const fieldTypes = require("../../shared/fieldTypes.json");
+const marker = require("../../shared/fieldTypes.json");
 const resolution = 64;
 const blurlevel = 20;
 const renderer = _renderer();
 const stage = new PIXI.Container();
 const stageField = new PIXI.Container();
 const players = {};
+const inside = marker();
 
 var fieldSprite, fieldType, width, height, myPlayerId;
 stage.addChild(stageField);
@@ -29,7 +31,7 @@ function _loadTextures() {
   var textures = [];
   for(var i=0; i<fieldTypes.length; i++) {
     if(i!=0) {
-      textures.push(fieldTypes[i].inside.texture);      
+      textures.push(fieldTypes[i].inside.texture);
     }
     textures.push(fieldTypes[i].outside.texture);
   }
@@ -110,6 +112,12 @@ function _addPlayer(x, y) {
 function _updatePlayer(playerId, x, y) {
   players[playerId].x = x*resolution;
   players[playerId].y = y*resolution;
+}
+
+function _updateView() {
+  playfield.getView(width,height,players[myPlayerId].x,players[myPlayerId].y,5,() => {
+
+  });
 }
 /*
 exports.removePlayer = (stage, player) => {
