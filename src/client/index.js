@@ -1,11 +1,13 @@
-var playfield = require("./pixi/playfield.js");
+var base = require("./pixi.js");
 var gameloop = require("./gameloop.js");
 
 var socket = require("socket.io-client")();
 
 socket.emit('join', "test", (data) => {
-  playfield.ready.then(() => {
-    playfield.start(data.width,data.height,data.playerId);
+  base.ready.then(() => {
+    base.playfield.init(base,data.width,data.height);
+    base.players.init(base,data.playerId);
+    console.log("test");
     gameloop(socket);
   });
 });

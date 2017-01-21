@@ -1,4 +1,4 @@
-const playfield = require("./pixi/playfield.js");
+const base = require("./pixi.js");
 const keyboard = require("./keyboard.js");
 
 var socket;
@@ -8,7 +8,7 @@ module.exports = (_socket) => {
   _tick();
   requestAnimationFrame(repeat);
   function repeat() {
-    playfield.render();
+    base.render();
     requestAnimationFrame(repeat);
   }
 };
@@ -26,20 +26,19 @@ function _tick() {
   } else if(lastdown==40) {
     output="bottom";
   }
-  console.log("test",output,lastdown);
-
   socket.emit("tick",output,(tick) => {
-    console.log("tick",tick);
+    _tick();
 
     var i;
 
     for(i=0; i<tick.fieldUpdates.length; i++) {
-      playfield.updateField(tick.fieldUpdates[i].x,tick.fieldUpdates[i].y,tick.fieldUpdates[i].type);
+      base.playfield.update(tick.fieldUpdates[i].x,tick.fieldUpdates[i].y,tick.fieldUpdates[i].type,true);
     }
 
     for(i=0; i<tick.playerUpdates.length; i++) {
-      playfield.updatePlayer(tick.playerUpdates[i]);
+      base.players.update(tick.playerUpdates[i]);
     }
-    _tick();
+
+    base.playfield.insight();
   });
 }

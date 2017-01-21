@@ -1,7 +1,8 @@
 module.exports = () => {
   var obj = {};
 
-  function add(key) {
+  function add(x,y) {
+    var key = x+":"+y;
     if(obj.hasOwnProperty(key)) {
       return false;
     } else {
@@ -10,7 +11,8 @@ module.exports = () => {
     }
   }
 
-  function remove(key) {
+  function remove(x,y) {
+    var key = x+":"+y;
     if(obj.hasOwnProperty(key)) {
       delete obj[key];
       return  true;
@@ -19,7 +21,23 @@ module.exports = () => {
     }
   }
 
-  function has(key) {
+  function has(x,y) {
+    var key = x+":"+y;
     return obj.hasOwnProperty(key);
   }
+
+  function list() {
+    var arr = [];
+    for(var key in obj) {
+      arr.push(key.split(":"));
+    }
+    return arr;
+  }
+
+  return {
+    add : add,
+    remove : remove,
+    has : has,
+    list : list
+  };
 };
