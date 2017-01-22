@@ -14,7 +14,6 @@ module.exports = (_socket) => {
 };
 
 function _tick() {
-
   var output = "";
   var lastdown = keyboard.key();
   if(lastdown==37) {
@@ -29,16 +28,24 @@ function _tick() {
   socket.emit("tick",output,(tick) => {
     _tick();
 
+    console.log("tick-data",tick);
+
     var i;
 
-    for(i=0; i<tick.fieldUpdates.length; i++) {
-      base.playfield.update(tick.fieldUpdates[i].x,tick.fieldUpdates[i].y,tick.fieldUpdates[i].type,true);
+    if(tick.hasOwnProperty("field")) {
+      for(i=0; i<tick.field.length; i++) {
+        base.playfield.update(tick.field[i].x,tick.field[i].y,tick.field[i].type,true);
+      }
     }
 
-    for(i=0; i<tick.playerUpdates.length; i++) {
-      base.players.update(tick.playerUpdates[i]);
+    if(tick.hasOwnProperty("player")) {
+      for(i=0; i<tick.player.length; i++) {
+        base.players.update(tick.player[i]);
+      }
     }
 
-    base.playfield.insight();
+    if(tick.hasOwnProperty("player") || tick.hasOwnProperty("field")) {
+      base.playfield.insight();
+    }
   });
 }

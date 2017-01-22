@@ -46,16 +46,16 @@
 
 	"use strict";
 	
-	var base = __webpack_require__(237);
-	var gameloop = __webpack_require__(182);
+	var base = __webpack_require__(1);
+	var gameloop = __webpack_require__(185);
 	
-	var socket = __webpack_require__(184)();
+	var socket = __webpack_require__(187)();
 	
 	socket.emit('join', "test", function (data) {
 	  base.ready.then(function () {
+	    console.log("join", data.id);
 	    base.playfield.init(base, data.width, data.height);
-	    base.players.init(base, data.playerId);
-	    console.log("test");
+	    base.players.init(base, data.id);
 	    gameloop(socket);
 	  });
 	});
@@ -67,100 +67,66 @@
 	"use strict";
 	
 	var PIXI = __webpack_require__(2);
-	var fieldTypes = __webpack_require__(181);
-	var marker = __webpack_require__(236);
+	var players = __webpack_require__(180);
+	var playfield = __webpack_require__(182);
+	
+	var resolution = 64;
+	var renderer = new PIXI.autoDetectRenderer(window.innerWidth, window.innerHeight);
 	var stage = new PIXI.Container();
-	var inside = marker();
 	
-	var sprites = [];
-	var types = [];
-	var base, width, height;
+	renderer.view.style.position = "absolute";
+	renderer.view.style.display = "block";
+	renderer.autoResize = true;
+	document.body.appendChild(renderer.view);
+	window.addEventListener("resize", resize);
 	
-	function init(_base, _width, _height) {
+	function status() {
+	  return {
+	    width: renderer.width,
+	    height: renderer.height,
+	    centerX: Math.round(renderer.width / 2),
+	    centerY: Math.round(renderer.height / 2)
+	  };
+	}
 	
-	  width = _width;
-	  height = _height;
-	  base = _base;
+	function resize() {
+	  renderer.resize(window.innerWidth, window.innerHeight);
+	  exports._status = status();
+	  players.center();
+	}
 	
-	  var i, p;
-	  for (i = 0; i < _width; i++) {
-	    sprites.push(new Array(_height));
-	    types.push(new Array(_height).fill(0));
-	  }
-	  for (i = 0; i < _width; i++) {
-	    for (p = 0; p < _height; p++) {
-	      sprites[i][p] = _addField(i, p);
-	    }
-	  }
+	function render() {
+	  //var time = Date.now();
+	  renderer.render(stage);
+	  //console.log("time",Date.now()-time);
+	}
 	
-	  base.add(stage);
+	function add(container) {
+	  stage.addChild(container);
+	}
+	
+	function remove(container) {
+	  stage.removeChild(container);
 	}
 	
 	function textures() {
-	  var textures = [];
-	  for (var i = 0; i < fieldTypes.length; i++) {
-	    if (i != 0) {
-	      textures.push(fieldTypes[i].inside.texture);
-	    }
-	    textures.push(fieldTypes[i].outside.texture);
-	  }
-	  return textures;
-	}
-	
-	function center(x, y) {
-	  stage.x = x;
-	  stage.y = y;
-	}
-	
-	function _addField(x, y) {
-	  var sprite = new PIXI.Sprite(PIXI.loader.resources[fieldTypes[0].outside.texture].texture);
-	  sprite.x = x * base._resolution;
-	  sprite.y = y * base._resolution;
-	  sprite.width = base._resolution;
-	  sprite.height = base._resolution;
-	  stage.addChild(sprite);
-	  return sprite;
-	}
-	
-	function update(x, y, type, _inside) {
-	  sprites[x][y].texture = PIXI.loader.resources[fieldTypes[type][_inside ? "inside" : "outside"].texture].texture;
-	  types[x][y] = type;
-	  if (_inside) {
-	    inside.add(x, y);
-	  } else {
-	    inside.remove(x, y);
-	  }
-	};
-	
-	function insight() {
-	  var newInside = marker();
-	
-	  base.players.getView(width, height, function (x, y) {
-	    newInside.add(x, y);
-	    inside.remove(x, y);
+	  var textures = players.textures().concat(playfield.textures());
+	  return new Promise(function (resolve, reject) {
+	    PIXI.loader.add(textures).load(function () {
+	      resolve();
+	    });
 	  });
-	
-	  var nowOutside = inside.list();
-	  var nowInside = newInside.list();
-	
-	  var i, pos;
-	  for (i = 0; i < nowOutside.length; i++) {
-	    var pos = nowOutside[i];
-	    update(pos[0], pos[1], types[pos[0]][pos[1]], false);
-	  }
-	  for (i = 0; i < nowInside.length; i++) {
-	    var pos = nowInside[i];
-	    update(pos[0], pos[1], types[pos[0]][pos[1]], true);
-	  }
-	  inside = newInside;
 	}
 	
 	module.exports = {
-	  init: init,
-	  insight: insight,
-	  update: update,
-	  center: center,
-	  textures: textures
+	  _resolution: resolution,
+	  _status: status(),
+	  render: render,
+	  add: add,
+	  remove: remove,
+	  ready: textures(),
+	  players: players,
+	  playfield: playfield
 	};
 
 /***/ },
@@ -34736,15 +34702,8 @@
 /* 166 */
 /***/ function(module, exports) {
 
-	/*
-	object-assign
-	(c) Sindre Sorhus
-	@license MIT
-	*/
-	
 	'use strict';
 	/* eslint-disable no-unused-vars */
-	var getOwnPropertySymbols = Object.getOwnPropertySymbols;
 	var hasOwnProperty = Object.prototype.hasOwnProperty;
 	var propIsEnumerable = Object.prototype.propertyIsEnumerable;
 	
@@ -34765,7 +34724,7 @@
 			// Detect buggy property enumeration order in older V8 versions.
 	
 			// https://bugs.chromium.org/p/v8/issues/detail?id=4118
-			var test1 = new String('abc');  // eslint-disable-line no-new-wrappers
+			var test1 = new String('abc');  // eslint-disable-line
 			test1[5] = 'de';
 			if (Object.getOwnPropertyNames(test1)[0] === '5') {
 				return false;
@@ -34794,7 +34753,7 @@
 			}
 	
 			return true;
-		} catch (err) {
+		} catch (e) {
 			// We don't expect any of the above to throw, but better to be safe.
 			return false;
 		}
@@ -34814,8 +34773,8 @@
 				}
 			}
 	
-			if (getOwnPropertySymbols) {
-				symbols = getOwnPropertySymbols(from);
+			if (Object.getOwnPropertySymbols) {
+				symbols = Object.getOwnPropertySymbols(from);
 				for (var i = 0; i < symbols.length; i++) {
 					if (propIsEnumerable.call(from, symbols[i])) {
 						to[symbols[i]] = from[symbols[i]];
@@ -37874,8 +37833,97 @@
 
 /***/ },
 /* 180 */
-/***/ function(module, exports) {
+/***/ function(module, exports, __webpack_require__) {
 
+	"use strict";
+	
+	var PIXI = __webpack_require__(2);
+	var playfield = __webpack_require__(181);
+	
+	function textures() {
+	  return ["images/explorer.png"];
+	}
+	
+	var stage = new PIXI.Container();
+	var stats = {};
+	var sprites = {};
+	var base, me;
+	
+	function init(_base, _me) {
+	  base = _base;
+	  me = _me;
+	  base.add(stage);
+	}
+	
+	function center() {
+	  if (!stats.hasOwnProperty(me)) {
+	    stage.x = 0;
+	    stage.y = 0;
+	    base.playfield.center(0, 0);
+	  } else {
+	    stage.x = base._status.centerX - base._resolution / 2 - stats[me].x * base._resolution;
+	    stage.y = base._status.centerY - base._resolution / 2 - stats[me].y * base._resolution;
+	    base.playfield.center(stage.x, stage.y);
+	  }
+	}
+	
+	function update(player) {
+	  if (!sprites.hasOwnProperty(player.id)) {
+	    _add(player);
+	  } else {
+	    _update(player);
+	  }
+	  if (player.id === me) {
+	    center();
+	  }
+	}
+	
+	function getView(width, height, callback) {
+	  if (!stats.hasOwnProperty(me)) {
+	    return;
+	  }
+	  playfield.getView(width, height, stats[me].x, stats[me].y, stats[me].sight, callback);
+	}
+	
+	function _add(player) {
+	  var sprite = new PIXI.Sprite(PIXI.loader.resources["images/explorer.png"].texture);
+	  sprite.width = base._resolution;
+	  sprite.height = base._resolution;
+	  sprites[player.id] = sprite;
+	  _update(player);
+	  stage.addChild(sprite);
+	}
+	
+	function _update(player) {
+	  if (player.stats.x == -1 && player.stats.y == -1) {
+	    _remove(player.id);
+	  } else {
+	    sprites[player.id].x = player.stats.x * base._resolution;
+	    sprites[player.id].y = player.stats.y * base._resolution;
+	    stats[player.id] = player.stats;
+	  }
+	}
+	
+	function _remove(id) {
+	  stage.removeChild(sprites[id]);
+	  delete sprites[id];
+	  delete stats[id];
+	}
+	
+	module.exports = {
+	  update: update,
+	  center: center,
+	  getView: getView,
+	  textures: textures,
+	  init: init
+	};
+
+/***/ },
+/* 181 */
+/***/ function(module, exports, __webpack_require__) {
+
+	const marker = __webpack_require__(184);
+	
 	exports.getView = (width,height,x,y,range,callback) => {
 	  var i,p,subRange,curX,curY;
 	  for(i=-range; i<=range; i++) {
@@ -37896,7 +37944,9 @@
 	
 	exports.getDiff = (width, height, x, y, range, field, subField) => {
 	  var diff = [];
+	  var inside = marker();
 	  exports.getView(width, height, x, y, range, (curX, curY) => {
+	    inside.add(curX,curY);
 	    if(field[curX][curY] != subField[curX][curY]) {
 	      subField[curX][curY] = field[curX][curY];
 	      diff.push({
@@ -37906,7 +37956,10 @@
 	      });
 	    }
 	  });
-	  return diff;
+	  return {
+	    diff : diff,
+	    inside : inside
+	  };
 	};
 	
 	exports.applyDiff = (field, diff) => {
@@ -37917,7 +37970,110 @@
 
 
 /***/ },
-/* 181 */
+/* 182 */
+/***/ function(module, exports, __webpack_require__) {
+
+	"use strict";
+	
+	var PIXI = __webpack_require__(2);
+	var fieldTypes = __webpack_require__(183);
+	var marker = __webpack_require__(184);
+	var stage = new PIXI.Container();
+	var inside = marker();
+	
+	var sprites = [];
+	var types = [];
+	var base, width, height;
+	
+	function init(_base, _width, _height) {
+	
+	  width = _width;
+	  height = _height;
+	  base = _base;
+	
+	  var i, p;
+	  for (i = 0; i < _width; i++) {
+	    sprites.push(new Array(_height));
+	    types.push(new Array(_height).fill(0));
+	  }
+	
+	  for (i = 0; i < _width; i++) {
+	    for (p = 0; p < _height; p++) {
+	      sprites[i][p] = _addField(i, p);
+	    }
+	  }
+	  base.add(stage);
+	}
+	
+	function textures() {
+	  var textures = [];
+	  for (var i = 0; i < fieldTypes.length; i++) {
+	    if (i !== 0) {
+	      textures.push(fieldTypes[i].inside.texture);
+	    }
+	    textures.push(fieldTypes[i].outside.texture);
+	  }
+	  return textures;
+	}
+	
+	function center(x, y) {
+	  stage.x = x;
+	  stage.y = y;
+	}
+	
+	function _addField(x, y) {
+	  var sprite = new PIXI.Sprite(PIXI.loader.resources[fieldTypes[0].outside.texture].texture);
+	  sprite.x = x * base._resolution;
+	  sprite.y = y * base._resolution;
+	  sprite.width = base._resolution;
+	  sprite.height = base._resolution;
+	  stage.addChild(sprite);
+	  return sprite;
+	}
+	
+	function update(x, y, type, _inside) {
+	  sprites[x][y].texture = PIXI.loader.resources[fieldTypes[type][_inside ? "inside" : "outside"].texture].texture;
+	  types[x][y] = type;
+	  if (_inside) {
+	    inside.add(x, y);
+	  } else {
+	    inside.remove(x, y);
+	  }
+	}
+	
+	function insight() {
+	  var newInside = marker();
+	
+	  base.players.getView(width, height, function (x, y) {
+	    newInside.add(x, y);
+	    inside.remove(x, y);
+	  });
+	
+	  var nowOutside = inside.list();
+	  var nowInside = newInside.list();
+	
+	  var i, pos;
+	  for (i = 0; i < nowOutside.length; i++) {
+	    pos = nowOutside[i];
+	    update(pos[0], pos[1], types[pos[0]][pos[1]], false);
+	  }
+	  for (i = 0; i < nowInside.length; i++) {
+	    pos = nowInside[i];
+	    update(pos[0], pos[1], types[pos[0]][pos[1]], true);
+	  }
+	  inside = newInside;
+	}
+	
+	module.exports = {
+	  init: init,
+	  insight: insight,
+	  update: update,
+	  center: center,
+	  textures: textures
+	};
+
+/***/ },
+/* 183 */
 /***/ function(module, exports) {
 
 	module.exports = [
@@ -37976,13 +38132,62 @@
 	];
 
 /***/ },
-/* 182 */
+/* 184 */
+/***/ function(module, exports) {
+
+	module.exports = () => {
+	  var obj = {};
+	
+	  function add(x,y) {
+	    var key = x+":"+y;
+	    if(obj.hasOwnProperty(key)) {
+	      return false;
+	    } else {
+	      obj[key] = null;
+	      return true;
+	    }
+	  }
+	
+	  function remove(x,y) {
+	    var key = x+":"+y;
+	    if(obj.hasOwnProperty(key)) {
+	      delete obj[key];
+	      return  true;
+	    } else {
+	      return false;
+	    }
+	  }
+	
+	  function has(x,y) {
+	    var key = x+":"+y;
+	    return obj.hasOwnProperty(key);
+	  }
+	
+	  function list() {
+	    var arr = [];
+	    for(var key in obj) {
+	      arr.push(key.split(":"));
+	    }
+	    return arr;
+	  }
+	
+	  return {
+	    add : add,
+	    remove : remove,
+	    has : has,
+	    list : list
+	  };
+	};
+
+
+/***/ },
+/* 185 */
 /***/ function(module, exports, __webpack_require__) {
 
 	"use strict";
 	
-	var base = __webpack_require__(237);
-	var keyboard = __webpack_require__(183);
+	var base = __webpack_require__(1);
+	var keyboard = __webpack_require__(186);
 	
 	var socket;
 	
@@ -37997,7 +38202,6 @@
 	};
 	
 	function _tick() {
-	
 	  var output = "";
 	  var lastdown = keyboard.key();
 	  if (lastdown == 37) {
@@ -38012,22 +38216,30 @@
 	  socket.emit("tick", output, function (tick) {
 	    _tick();
 	
+	    console.log("tick-data", tick);
+	
 	    var i;
 	
-	    for (i = 0; i < tick.fieldUpdates.length; i++) {
-	      base.playfield.update(tick.fieldUpdates[i].x, tick.fieldUpdates[i].y, tick.fieldUpdates[i].type, true);
+	    if (tick.hasOwnProperty("field")) {
+	      for (i = 0; i < tick.field.length; i++) {
+	        base.playfield.update(tick.field[i].x, tick.field[i].y, tick.field[i].type, true);
+	      }
 	    }
 	
-	    for (i = 0; i < tick.playerUpdates.length; i++) {
-	      base.players.update(tick.playerUpdates[i]);
+	    if (tick.hasOwnProperty("player")) {
+	      for (i = 0; i < tick.player.length; i++) {
+	        base.players.update(tick.player[i]);
+	      }
 	    }
 	
-	    base.playfield.insight();
+	    if (tick.hasOwnProperty("player") || tick.hasOwnProperty("field")) {
+	      base.playfield.insight();
+	    }
 	  });
 	}
 
 /***/ },
-/* 183 */
+/* 186 */
 /***/ function(module, exports) {
 
 	"use strict";
@@ -38037,12 +38249,12 @@
 	function downHandler(event) {
 	  key = event.keyCode;
 	  event.preventDefault();
-	};
+	}
 	
 	function upHandler(event) {
 	  key = -1;
 	  event.preventDefault();
-	};
+	}
 	
 	window.addEventListener("keydown", downHandler, false);
 	window.addEventListener("keyup", upHandler, false);
@@ -38052,7 +38264,7 @@
 	};
 
 /***/ },
-/* 184 */
+/* 187 */
 /***/ function(module, exports, __webpack_require__) {
 
 	
@@ -38060,10 +38272,10 @@
 	 * Module dependencies.
 	 */
 	
-	var url = __webpack_require__(185);
-	var parser = __webpack_require__(190);
+	var url = __webpack_require__(188);
+	var parser = __webpack_require__(193);
 	var Manager = __webpack_require__(200);
-	var debug = __webpack_require__(187)('socket.io-client');
+	var debug = __webpack_require__(190)('socket.io-client');
 	
 	/**
 	 * Module exports.
@@ -38090,8 +38302,8 @@
 	 * @api public
 	 */
 	
-	function lookup (uri, opts) {
-	  if (typeof uri === 'object') {
+	function lookup(uri, opts) {
+	  if (typeof uri == 'object') {
 	    opts = uri;
 	    uri = undefined;
 	  }
@@ -38118,27 +38330,10 @@
 	    }
 	    io = cache[id];
 	  }
-	  if (parsed.query && !opts.query) {
-	    opts.query = parsed.query;
-	  } else if (opts && 'object' === typeof opts.query) {
-	    opts.query = encodeQueryString(opts.query);
-	  }
-	  return io.socket(parsed.path, opts);
+	
+	  return io.socket(parsed.path);
 	}
-	/**
-	 *  Helper method to parse query objects to string.
-	 * @param {object} query
-	 * @returns {string}
-	 */
-	function encodeQueryString (obj) {
-	  var str = [];
-	  for (var p in obj) {
-	    if (obj.hasOwnProperty(p)) {
-	      str.push(encodeURIComponent(p) + '=' + encodeURIComponent(obj[p]));
-	    }
-	  }
-	  return str.join('&');
-	}
+	
 	/**
 	 * Protocol version.
 	 *
@@ -38163,11 +38358,11 @@
 	 */
 	
 	exports.Manager = __webpack_require__(200);
-	exports.Socket = __webpack_require__(230);
+	exports.Socket = __webpack_require__(226);
 
 
 /***/ },
-/* 185 */
+/* 188 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/* WEBPACK VAR INJECTION */(function(global) {
@@ -38175,8 +38370,8 @@
 	 * Module dependencies.
 	 */
 	
-	var parseuri = __webpack_require__(186);
-	var debug = __webpack_require__(187)('socket.io-client:url');
+	var parseuri = __webpack_require__(189);
+	var debug = __webpack_require__(190)('socket.io-client:url');
 	
 	/**
 	 * Module exports.
@@ -38193,17 +38388,17 @@
 	 * @api public
 	 */
 	
-	function url (uri, loc) {
+	function url(uri, loc){
 	  var obj = uri;
 	
 	  // default to window.location
-	  loc = loc || global.location;
+	  var loc = loc || global.location;
 	  if (null == uri) uri = loc.protocol + '//' + loc.host;
 	
 	  // relative path support
-	  if ('string' === typeof uri) {
-	    if ('/' === uri.charAt(0)) {
-	      if ('/' === uri.charAt(1)) {
+	  if ('string' == typeof uri) {
+	    if ('/' == uri.charAt(0)) {
+	      if ('/' == uri.charAt(1)) {
 	        uri = loc.protocol + uri;
 	      } else {
 	        uri = loc.host + uri;
@@ -38212,7 +38407,7 @@
 	
 	    if (!/^(https?|wss?):\/\//.test(uri)) {
 	      debug('protocol-less url %s', uri);
-	      if ('undefined' !== typeof loc) {
+	      if ('undefined' != typeof loc) {
 	        uri = loc.protocol + '//' + uri;
 	      } else {
 	        uri = 'https://' + uri;
@@ -38228,7 +38423,8 @@
 	  if (!obj.port) {
 	    if (/^(http|ws)$/.test(obj.protocol)) {
 	      obj.port = '80';
-	    } else if (/^(http|ws)s$/.test(obj.protocol)) {
+	    }
+	    else if (/^(http|ws)s$/.test(obj.protocol)) {
 	      obj.port = '443';
 	    }
 	  }
@@ -38241,7 +38437,7 @@
 	  // define unique id
 	  obj.id = obj.protocol + '://' + host + ':' + obj.port;
 	  // define href
-	  obj.href = obj.protocol + '://' + host + (loc && loc.port === obj.port ? '' : (':' + obj.port));
+	  obj.href = obj.protocol + '://' + host + (loc && loc.port == obj.port ? '' : (':' + obj.port));
 	
 	  return obj;
 	}
@@ -38249,7 +38445,7 @@
 	/* WEBPACK VAR INJECTION */}.call(exports, (function() { return this; }())))
 
 /***/ },
-/* 186 */
+/* 189 */
 /***/ function(module, exports) {
 
 	/**
@@ -38294,17 +38490,17 @@
 
 
 /***/ },
-/* 187 */
+/* 190 */
 /***/ function(module, exports, __webpack_require__) {
 
-	/* WEBPACK VAR INJECTION */(function(process) {
+	
 	/**
 	 * This is the web browser implementation of `debug()`.
 	 *
 	 * Expose `debug()` as the module.
 	 */
 	
-	exports = module.exports = __webpack_require__(188);
+	exports = module.exports = __webpack_require__(191);
 	exports.log = log;
 	exports.formatArgs = formatArgs;
 	exports.save = save;
@@ -38338,8 +38534,7 @@
 	
 	function useColors() {
 	  // is webkit? http://stackoverflow.com/a/16459606/376773
-	  // document is undefined in react-native: https://github.com/facebook/react-native/pull/1632
-	  return (typeof document !== 'undefined' && 'WebkitAppearance' in document.documentElement.style) ||
+	  return ('WebkitAppearance' in document.documentElement.style) ||
 	    // is firebug? http://stackoverflow.com/a/398120/376773
 	    (window.console && (console.firebug || (console.exception && console.table))) ||
 	    // is firefox >= v31?
@@ -38352,11 +38547,7 @@
 	 */
 	
 	exports.formatters.j = function(v) {
-	  try {
-	    return JSON.stringify(v);
-	  } catch (err) {
-	    return '[UnexpectedJSONParseError]: ' + err.message;
-	  }
+	  return JSON.stringify(v);
 	};
 	
 	
@@ -38443,13 +38634,9 @@
 	function load() {
 	  var r;
 	  try {
-	    return exports.storage.debug;
+	    r = exports.storage.debug;
 	  } catch(e) {}
-	
-	  // If debug isn't set in LS, and we're in Electron, try to load $DEBUG
-	  if (typeof process !== 'undefined' && 'env' in process) {
-	    return process.env.DEBUG;
-	  }
+	  return r;
 	}
 	
 	/**
@@ -38474,11 +38661,10 @@
 	    return window.localStorage;
 	  } catch (e) {}
 	}
-	
-	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(80)))
+
 
 /***/ },
-/* 188 */
+/* 191 */
 /***/ function(module, exports, __webpack_require__) {
 
 	
@@ -38489,12 +38675,12 @@
 	 * Expose `debug()` as the module.
 	 */
 	
-	exports = module.exports = debug.debug = debug;
+	exports = module.exports = debug;
 	exports.coerce = coerce;
 	exports.disable = disable;
 	exports.enable = enable;
 	exports.enabled = enabled;
-	exports.humanize = __webpack_require__(189);
+	exports.humanize = __webpack_require__(192);
 	
 	/**
 	 * The currently active debug mode names, and names to skip.
@@ -38566,10 +38752,7 @@
 	    if (null == self.useColors) self.useColors = exports.useColors();
 	    if (null == self.color && self.useColors) self.color = selectColor();
 	
-	    var args = new Array(arguments.length);
-	    for (var i = 0; i < args.length; i++) {
-	      args[i] = arguments[i];
-	    }
+	    var args = Array.prototype.slice.call(arguments);
 	
 	    args[0] = exports.coerce(args[0]);
 	
@@ -38596,9 +38779,9 @@
 	      return match;
 	    });
 	
-	    // apply env-specific formatting
-	    args = exports.formatArgs.apply(self, args);
-	
+	    if ('function' === typeof exports.formatArgs) {
+	      args = exports.formatArgs.apply(self, args);
+	    }
 	    var logFn = enabled.log || exports.log || console.log.bind(console);
 	    logFn.apply(self, args);
 	  }
@@ -38627,7 +38810,7 @@
 	
 	  for (var i = 0; i < len; i++) {
 	    if (!split[i]) continue; // ignore empty strings
-	    namespaces = split[i].replace(/[\\^$+?.()|[\]{}]/g, '\\$&').replace(/\*/g, '.*?');
+	    namespaces = split[i].replace(/\*/g, '.*?');
 	    if (namespaces[0] === '-') {
 	      exports.skips.push(new RegExp('^' + namespaces.substr(1) + '$'));
 	    } else {
@@ -38684,18 +38867,18 @@
 
 
 /***/ },
-/* 189 */
+/* 192 */
 /***/ function(module, exports) {
 
 	/**
 	 * Helpers.
 	 */
 	
-	var s = 1000
-	var m = s * 60
-	var h = m * 60
-	var d = h * 24
-	var y = d * 365.25
+	var s = 1000;
+	var m = s * 60;
+	var h = m * 60;
+	var d = h * 24;
+	var y = d * 365.25;
 	
 	/**
 	 * Parse or format the given `val`.
@@ -38706,23 +38889,17 @@
 	 *
 	 * @param {String|Number} val
 	 * @param {Object} options
-	 * @throws {Error} throw an error if val is not a non-empty string or a number
 	 * @return {String|Number}
 	 * @api public
 	 */
 	
-	module.exports = function (val, options) {
-	  options = options || {}
-	  var type = typeof val
-	  if (type === 'string' && val.length > 0) {
-	    return parse(val)
-	  } else if (type === 'number' && isNaN(val) === false) {
-	    return options.long ?
-				fmtLong(val) :
-				fmtShort(val)
-	  }
-	  throw new Error('val is not a non-empty string or a valid number. val=' + JSON.stringify(val))
-	}
+	module.exports = function(val, options){
+	  options = options || {};
+	  if ('string' == typeof val) return parse(val);
+	  return options.long
+	    ? long(val)
+	    : short(val);
+	};
 	
 	/**
 	 * Parse the given `str` and return milliseconds.
@@ -38733,53 +38910,47 @@
 	 */
 	
 	function parse(str) {
-	  str = String(str)
-	  if (str.length > 10000) {
-	    return
-	  }
-	  var match = /^((?:\d+)?\.?\d+) *(milliseconds?|msecs?|ms|seconds?|secs?|s|minutes?|mins?|m|hours?|hrs?|h|days?|d|years?|yrs?|y)?$/i.exec(str)
-	  if (!match) {
-	    return
-	  }
-	  var n = parseFloat(match[1])
-	  var type = (match[2] || 'ms').toLowerCase()
+	  str = '' + str;
+	  if (str.length > 10000) return;
+	  var match = /^((?:\d+)?\.?\d+) *(milliseconds?|msecs?|ms|seconds?|secs?|s|minutes?|mins?|m|hours?|hrs?|h|days?|d|years?|yrs?|y)?$/i.exec(str);
+	  if (!match) return;
+	  var n = parseFloat(match[1]);
+	  var type = (match[2] || 'ms').toLowerCase();
 	  switch (type) {
 	    case 'years':
 	    case 'year':
 	    case 'yrs':
 	    case 'yr':
 	    case 'y':
-	      return n * y
+	      return n * y;
 	    case 'days':
 	    case 'day':
 	    case 'd':
-	      return n * d
+	      return n * d;
 	    case 'hours':
 	    case 'hour':
 	    case 'hrs':
 	    case 'hr':
 	    case 'h':
-	      return n * h
+	      return n * h;
 	    case 'minutes':
 	    case 'minute':
 	    case 'mins':
 	    case 'min':
 	    case 'm':
-	      return n * m
+	      return n * m;
 	    case 'seconds':
 	    case 'second':
 	    case 'secs':
 	    case 'sec':
 	    case 's':
-	      return n * s
+	      return n * s;
 	    case 'milliseconds':
 	    case 'millisecond':
 	    case 'msecs':
 	    case 'msec':
 	    case 'ms':
-	      return n
-	    default:
-	      return undefined
+	      return n;
 	  }
 	}
 	
@@ -38791,20 +38962,12 @@
 	 * @api private
 	 */
 	
-	function fmtShort(ms) {
-	  if (ms >= d) {
-	    return Math.round(ms / d) + 'd'
-	  }
-	  if (ms >= h) {
-	    return Math.round(ms / h) + 'h'
-	  }
-	  if (ms >= m) {
-	    return Math.round(ms / m) + 'm'
-	  }
-	  if (ms >= s) {
-	    return Math.round(ms / s) + 's'
-	  }
-	  return ms + 'ms'
+	function short(ms) {
+	  if (ms >= d) return Math.round(ms / d) + 'd';
+	  if (ms >= h) return Math.round(ms / h) + 'h';
+	  if (ms >= m) return Math.round(ms / m) + 'm';
+	  if (ms >= s) return Math.round(ms / s) + 's';
+	  return ms + 'ms';
 	}
 	
 	/**
@@ -38815,12 +38978,12 @@
 	 * @api private
 	 */
 	
-	function fmtLong(ms) {
-	  return plural(ms, d, 'day') ||
-	    plural(ms, h, 'hour') ||
-	    plural(ms, m, 'minute') ||
-	    plural(ms, s, 'second') ||
-	    ms + ' ms'
+	function long(ms) {
+	  return plural(ms, d, 'day')
+	    || plural(ms, h, 'hour')
+	    || plural(ms, m, 'minute')
+	    || plural(ms, s, 'second')
+	    || ms + ' ms';
 	}
 	
 	/**
@@ -38828,18 +38991,14 @@
 	 */
 	
 	function plural(ms, n, name) {
-	  if (ms < n) {
-	    return
-	  }
-	  if (ms < n * 1.5) {
-	    return Math.floor(ms / n) + ' ' + name
-	  }
-	  return Math.ceil(ms / n) + ' ' + name + 's'
+	  if (ms < n) return;
+	  if (ms < n * 1.5) return Math.floor(ms / n) + ' ' + name;
+	  return Math.ceil(ms / n) + ' ' + name + 's';
 	}
 
 
 /***/ },
-/* 190 */
+/* 193 */
 /***/ function(module, exports, __webpack_require__) {
 
 	
@@ -38847,10 +39006,11 @@
 	 * Module dependencies.
 	 */
 	
-	var debug = __webpack_require__(191)('socket.io-parser');
+	var debug = __webpack_require__(190)('socket.io-parser');
 	var json = __webpack_require__(194);
-	var Emitter = __webpack_require__(196);
-	var binary = __webpack_require__(197);
+	var isArray = __webpack_require__(196);
+	var Emitter = __webpack_require__(197);
+	var binary = __webpack_require__(198);
 	var isBuf = __webpack_require__(199);
 	
 	/**
@@ -39166,21 +39326,16 @@
 	
 	  // look up json data
 	  if (str.charAt(++i)) {
-	    p = tryParse(p, str.substr(i));
+	    try {
+	      p.data = json.parse(str.substr(i));
+	    } catch(e){
+	      return error();
+	    }
 	  }
 	
 	  debug('decoded %s as %j', str, p);
 	  return p;
 	}
-	
-	function tryParse(p, str) {
-	  try {
-	    p.data = json.parse(str);
-	  } catch(e){
-	    return error();
-	  }
-	  return p; 
-	};
 	
 	/**
 	 * Deallocates a parser's resources
@@ -39245,514 +39400,6 @@
 	    type: exports.ERROR,
 	    data: 'parser error'
 	  };
-	}
-
-
-/***/ },
-/* 191 */
-/***/ function(module, exports, __webpack_require__) {
-
-	
-	/**
-	 * This is the web browser implementation of `debug()`.
-	 *
-	 * Expose `debug()` as the module.
-	 */
-	
-	exports = module.exports = __webpack_require__(192);
-	exports.log = log;
-	exports.formatArgs = formatArgs;
-	exports.save = save;
-	exports.load = load;
-	exports.useColors = useColors;
-	exports.storage = 'undefined' != typeof chrome
-	               && 'undefined' != typeof chrome.storage
-	                  ? chrome.storage.local
-	                  : localstorage();
-	
-	/**
-	 * Colors.
-	 */
-	
-	exports.colors = [
-	  'lightseagreen',
-	  'forestgreen',
-	  'goldenrod',
-	  'dodgerblue',
-	  'darkorchid',
-	  'crimson'
-	];
-	
-	/**
-	 * Currently only WebKit-based Web Inspectors, Firefox >= v31,
-	 * and the Firebug extension (any Firefox version) are known
-	 * to support "%c" CSS customizations.
-	 *
-	 * TODO: add a `localStorage` variable to explicitly enable/disable colors
-	 */
-	
-	function useColors() {
-	  // is webkit? http://stackoverflow.com/a/16459606/376773
-	  return ('WebkitAppearance' in document.documentElement.style) ||
-	    // is firebug? http://stackoverflow.com/a/398120/376773
-	    (window.console && (console.firebug || (console.exception && console.table))) ||
-	    // is firefox >= v31?
-	    // https://developer.mozilla.org/en-US/docs/Tools/Web_Console#Styling_messages
-	    (navigator.userAgent.toLowerCase().match(/firefox\/(\d+)/) && parseInt(RegExp.$1, 10) >= 31);
-	}
-	
-	/**
-	 * Map %j to `JSON.stringify()`, since no Web Inspectors do that by default.
-	 */
-	
-	exports.formatters.j = function(v) {
-	  return JSON.stringify(v);
-	};
-	
-	
-	/**
-	 * Colorize log arguments if enabled.
-	 *
-	 * @api public
-	 */
-	
-	function formatArgs() {
-	  var args = arguments;
-	  var useColors = this.useColors;
-	
-	  args[0] = (useColors ? '%c' : '')
-	    + this.namespace
-	    + (useColors ? ' %c' : ' ')
-	    + args[0]
-	    + (useColors ? '%c ' : ' ')
-	    + '+' + exports.humanize(this.diff);
-	
-	  if (!useColors) return args;
-	
-	  var c = 'color: ' + this.color;
-	  args = [args[0], c, 'color: inherit'].concat(Array.prototype.slice.call(args, 1));
-	
-	  // the final "%c" is somewhat tricky, because there could be other
-	  // arguments passed either before or after the %c, so we need to
-	  // figure out the correct index to insert the CSS into
-	  var index = 0;
-	  var lastC = 0;
-	  args[0].replace(/%[a-z%]/g, function(match) {
-	    if ('%%' === match) return;
-	    index++;
-	    if ('%c' === match) {
-	      // we only are interested in the *last* %c
-	      // (the user may have provided their own)
-	      lastC = index;
-	    }
-	  });
-	
-	  args.splice(lastC, 0, c);
-	  return args;
-	}
-	
-	/**
-	 * Invokes `console.log()` when available.
-	 * No-op when `console.log` is not a "function".
-	 *
-	 * @api public
-	 */
-	
-	function log() {
-	  // this hackery is required for IE8/9, where
-	  // the `console.log` function doesn't have 'apply'
-	  return 'object' === typeof console
-	    && console.log
-	    && Function.prototype.apply.call(console.log, console, arguments);
-	}
-	
-	/**
-	 * Save `namespaces`.
-	 *
-	 * @param {String} namespaces
-	 * @api private
-	 */
-	
-	function save(namespaces) {
-	  try {
-	    if (null == namespaces) {
-	      exports.storage.removeItem('debug');
-	    } else {
-	      exports.storage.debug = namespaces;
-	    }
-	  } catch(e) {}
-	}
-	
-	/**
-	 * Load `namespaces`.
-	 *
-	 * @return {String} returns the previously persisted debug modes
-	 * @api private
-	 */
-	
-	function load() {
-	  var r;
-	  try {
-	    r = exports.storage.debug;
-	  } catch(e) {}
-	  return r;
-	}
-	
-	/**
-	 * Enable namespaces listed in `localStorage.debug` initially.
-	 */
-	
-	exports.enable(load());
-	
-	/**
-	 * Localstorage attempts to return the localstorage.
-	 *
-	 * This is necessary because safari throws
-	 * when a user disables cookies/localstorage
-	 * and you attempt to access it.
-	 *
-	 * @return {LocalStorage}
-	 * @api private
-	 */
-	
-	function localstorage(){
-	  try {
-	    return window.localStorage;
-	  } catch (e) {}
-	}
-
-
-/***/ },
-/* 192 */
-/***/ function(module, exports, __webpack_require__) {
-
-	
-	/**
-	 * This is the common logic for both the Node.js and web browser
-	 * implementations of `debug()`.
-	 *
-	 * Expose `debug()` as the module.
-	 */
-	
-	exports = module.exports = debug;
-	exports.coerce = coerce;
-	exports.disable = disable;
-	exports.enable = enable;
-	exports.enabled = enabled;
-	exports.humanize = __webpack_require__(193);
-	
-	/**
-	 * The currently active debug mode names, and names to skip.
-	 */
-	
-	exports.names = [];
-	exports.skips = [];
-	
-	/**
-	 * Map of special "%n" handling functions, for the debug "format" argument.
-	 *
-	 * Valid key names are a single, lowercased letter, i.e. "n".
-	 */
-	
-	exports.formatters = {};
-	
-	/**
-	 * Previously assigned color.
-	 */
-	
-	var prevColor = 0;
-	
-	/**
-	 * Previous log timestamp.
-	 */
-	
-	var prevTime;
-	
-	/**
-	 * Select a color.
-	 *
-	 * @return {Number}
-	 * @api private
-	 */
-	
-	function selectColor() {
-	  return exports.colors[prevColor++ % exports.colors.length];
-	}
-	
-	/**
-	 * Create a debugger with the given `namespace`.
-	 *
-	 * @param {String} namespace
-	 * @return {Function}
-	 * @api public
-	 */
-	
-	function debug(namespace) {
-	
-	  // define the `disabled` version
-	  function disabled() {
-	  }
-	  disabled.enabled = false;
-	
-	  // define the `enabled` version
-	  function enabled() {
-	
-	    var self = enabled;
-	
-	    // set `diff` timestamp
-	    var curr = +new Date();
-	    var ms = curr - (prevTime || curr);
-	    self.diff = ms;
-	    self.prev = prevTime;
-	    self.curr = curr;
-	    prevTime = curr;
-	
-	    // add the `color` if not set
-	    if (null == self.useColors) self.useColors = exports.useColors();
-	    if (null == self.color && self.useColors) self.color = selectColor();
-	
-	    var args = Array.prototype.slice.call(arguments);
-	
-	    args[0] = exports.coerce(args[0]);
-	
-	    if ('string' !== typeof args[0]) {
-	      // anything else let's inspect with %o
-	      args = ['%o'].concat(args);
-	    }
-	
-	    // apply any `formatters` transformations
-	    var index = 0;
-	    args[0] = args[0].replace(/%([a-z%])/g, function(match, format) {
-	      // if we encounter an escaped % then don't increase the array index
-	      if (match === '%%') return match;
-	      index++;
-	      var formatter = exports.formatters[format];
-	      if ('function' === typeof formatter) {
-	        var val = args[index];
-	        match = formatter.call(self, val);
-	
-	        // now we need to remove `args[index]` since it's inlined in the `format`
-	        args.splice(index, 1);
-	        index--;
-	      }
-	      return match;
-	    });
-	
-	    if ('function' === typeof exports.formatArgs) {
-	      args = exports.formatArgs.apply(self, args);
-	    }
-	    var logFn = enabled.log || exports.log || console.log.bind(console);
-	    logFn.apply(self, args);
-	  }
-	  enabled.enabled = true;
-	
-	  var fn = exports.enabled(namespace) ? enabled : disabled;
-	
-	  fn.namespace = namespace;
-	
-	  return fn;
-	}
-	
-	/**
-	 * Enables a debug mode by namespaces. This can include modes
-	 * separated by a colon and wildcards.
-	 *
-	 * @param {String} namespaces
-	 * @api public
-	 */
-	
-	function enable(namespaces) {
-	  exports.save(namespaces);
-	
-	  var split = (namespaces || '').split(/[\s,]+/);
-	  var len = split.length;
-	
-	  for (var i = 0; i < len; i++) {
-	    if (!split[i]) continue; // ignore empty strings
-	    namespaces = split[i].replace(/\*/g, '.*?');
-	    if (namespaces[0] === '-') {
-	      exports.skips.push(new RegExp('^' + namespaces.substr(1) + '$'));
-	    } else {
-	      exports.names.push(new RegExp('^' + namespaces + '$'));
-	    }
-	  }
-	}
-	
-	/**
-	 * Disable debug output.
-	 *
-	 * @api public
-	 */
-	
-	function disable() {
-	  exports.enable('');
-	}
-	
-	/**
-	 * Returns true if the given mode name is enabled, false otherwise.
-	 *
-	 * @param {String} name
-	 * @return {Boolean}
-	 * @api public
-	 */
-	
-	function enabled(name) {
-	  var i, len;
-	  for (i = 0, len = exports.skips.length; i < len; i++) {
-	    if (exports.skips[i].test(name)) {
-	      return false;
-	    }
-	  }
-	  for (i = 0, len = exports.names.length; i < len; i++) {
-	    if (exports.names[i].test(name)) {
-	      return true;
-	    }
-	  }
-	  return false;
-	}
-	
-	/**
-	 * Coerce `val`.
-	 *
-	 * @param {Mixed} val
-	 * @return {Mixed}
-	 * @api private
-	 */
-	
-	function coerce(val) {
-	  if (val instanceof Error) return val.stack || val.message;
-	  return val;
-	}
-
-
-/***/ },
-/* 193 */
-/***/ function(module, exports) {
-
-	/**
-	 * Helpers.
-	 */
-	
-	var s = 1000;
-	var m = s * 60;
-	var h = m * 60;
-	var d = h * 24;
-	var y = d * 365.25;
-	
-	/**
-	 * Parse or format the given `val`.
-	 *
-	 * Options:
-	 *
-	 *  - `long` verbose formatting [false]
-	 *
-	 * @param {String|Number} val
-	 * @param {Object} options
-	 * @return {String|Number}
-	 * @api public
-	 */
-	
-	module.exports = function(val, options){
-	  options = options || {};
-	  if ('string' == typeof val) return parse(val);
-	  return options.long
-	    ? long(val)
-	    : short(val);
-	};
-	
-	/**
-	 * Parse the given `str` and return milliseconds.
-	 *
-	 * @param {String} str
-	 * @return {Number}
-	 * @api private
-	 */
-	
-	function parse(str) {
-	  str = '' + str;
-	  if (str.length > 10000) return;
-	  var match = /^((?:\d+)?\.?\d+) *(milliseconds?|msecs?|ms|seconds?|secs?|s|minutes?|mins?|m|hours?|hrs?|h|days?|d|years?|yrs?|y)?$/i.exec(str);
-	  if (!match) return;
-	  var n = parseFloat(match[1]);
-	  var type = (match[2] || 'ms').toLowerCase();
-	  switch (type) {
-	    case 'years':
-	    case 'year':
-	    case 'yrs':
-	    case 'yr':
-	    case 'y':
-	      return n * y;
-	    case 'days':
-	    case 'day':
-	    case 'd':
-	      return n * d;
-	    case 'hours':
-	    case 'hour':
-	    case 'hrs':
-	    case 'hr':
-	    case 'h':
-	      return n * h;
-	    case 'minutes':
-	    case 'minute':
-	    case 'mins':
-	    case 'min':
-	    case 'm':
-	      return n * m;
-	    case 'seconds':
-	    case 'second':
-	    case 'secs':
-	    case 'sec':
-	    case 's':
-	      return n * s;
-	    case 'milliseconds':
-	    case 'millisecond':
-	    case 'msecs':
-	    case 'msec':
-	    case 'ms':
-	      return n;
-	  }
-	}
-	
-	/**
-	 * Short format for `ms`.
-	 *
-	 * @param {Number} ms
-	 * @return {String}
-	 * @api private
-	 */
-	
-	function short(ms) {
-	  if (ms >= d) return Math.round(ms / d) + 'd';
-	  if (ms >= h) return Math.round(ms / h) + 'h';
-	  if (ms >= m) return Math.round(ms / m) + 'm';
-	  if (ms >= s) return Math.round(ms / s) + 's';
-	  return ms + 'ms';
-	}
-	
-	/**
-	 * Long format for `ms`.
-	 *
-	 * @param {Number} ms
-	 * @return {String}
-	 * @api private
-	 */
-	
-	function long(ms) {
-	  return plural(ms, d, 'day')
-	    || plural(ms, h, 'hour')
-	    || plural(ms, m, 'minute')
-	    || plural(ms, s, 'second')
-	    || ms + ' ms';
-	}
-	
-	/**
-	 * Pluralization helper.
-	 */
-	
-	function plural(ms, n, name) {
-	  if (ms < n) return;
-	  if (ms < n * 1.5) return Math.floor(ms / n) + ' ' + name;
-	  return Math.ceil(ms / n) + ' ' + name + 's';
 	}
 
 
@@ -40677,6 +40324,15 @@
 /* 196 */
 /***/ function(module, exports) {
 
+	module.exports = Array.isArray || function (arr) {
+	  return Object.prototype.toString.call(arr) == '[object Array]';
+	};
+
+
+/***/ },
+/* 197 */
+/***/ function(module, exports) {
+
 	
 	/**
 	 * Expose `Emitter`.
@@ -40844,7 +40500,7 @@
 
 
 /***/ },
-/* 197 */
+/* 198 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/* WEBPACK VAR INJECTION */(function(global) {/*global Blob,File*/
@@ -40853,7 +40509,7 @@
 	 * Module requirements
 	 */
 	
-	var isArray = __webpack_require__(198);
+	var isArray = __webpack_require__(196);
 	var isBuf = __webpack_require__(199);
 	
 	/**
@@ -40992,15 +40648,6 @@
 	/* WEBPACK VAR INJECTION */}.call(exports, (function() { return this; }())))
 
 /***/ },
-/* 198 */
-/***/ function(module, exports) {
-
-	module.exports = Array.isArray || function (arr) {
-	  return Object.prototype.toString.call(arr) == '[object Array]';
-	};
-
-
-/***/ },
 /* 199 */
 /***/ function(module, exports) {
 
@@ -41030,14 +40677,14 @@
 	 */
 	
 	var eio = __webpack_require__(201);
-	var Socket = __webpack_require__(230);
-	var Emitter = __webpack_require__(231);
-	var parser = __webpack_require__(190);
-	var on = __webpack_require__(233);
-	var bind = __webpack_require__(234);
-	var debug = __webpack_require__(187)('socket.io-client:manager');
-	var indexOf = __webpack_require__(228);
-	var Backoff = __webpack_require__(235);
+	var Socket = __webpack_require__(226);
+	var Emitter = __webpack_require__(227);
+	var parser = __webpack_require__(193);
+	var on = __webpack_require__(229);
+	var bind = __webpack_require__(230);
+	var debug = __webpack_require__(190)('socket.io-client:manager');
+	var indexOf = __webpack_require__(224);
+	var Backoff = __webpack_require__(232);
 	
 	/**
 	 * IE6+ hasOwnProperty
@@ -41059,9 +40706,9 @@
 	 * @api public
 	 */
 	
-	function Manager (uri, opts) {
+	function Manager(uri, opts){
 	  if (!(this instanceof Manager)) return new Manager(uri, opts);
-	  if (uri && ('object' === typeof uri)) {
+	  if (uri && ('object' == typeof uri)) {
 	    opts = uri;
 	    uri = undefined;
 	  }
@@ -41100,7 +40747,7 @@
 	 * @api private
 	 */
 	
-	Manager.prototype.emitAll = function () {
+	Manager.prototype.emitAll = function() {
 	  this.emit.apply(this, arguments);
 	  for (var nsp in this.nsps) {
 	    if (has.call(this.nsps, nsp)) {
@@ -41115,7 +40762,7 @@
 	 * @api private
 	 */
 	
-	Manager.prototype.updateSocketIds = function () {
+	Manager.prototype.updateSocketIds = function(){
 	  for (var nsp in this.nsps) {
 	    if (has.call(this.nsps, nsp)) {
 	      this.nsps[nsp].id = this.engine.id;
@@ -41137,7 +40784,7 @@
 	 * @api public
 	 */
 	
-	Manager.prototype.reconnection = function (v) {
+	Manager.prototype.reconnection = function(v){
 	  if (!arguments.length) return this._reconnection;
 	  this._reconnection = !!v;
 	  return this;
@@ -41151,7 +40798,7 @@
 	 * @api public
 	 */
 	
-	Manager.prototype.reconnectionAttempts = function (v) {
+	Manager.prototype.reconnectionAttempts = function(v){
 	  if (!arguments.length) return this._reconnectionAttempts;
 	  this._reconnectionAttempts = v;
 	  return this;
@@ -41165,14 +40812,14 @@
 	 * @api public
 	 */
 	
-	Manager.prototype.reconnectionDelay = function (v) {
+	Manager.prototype.reconnectionDelay = function(v){
 	  if (!arguments.length) return this._reconnectionDelay;
 	  this._reconnectionDelay = v;
 	  this.backoff && this.backoff.setMin(v);
 	  return this;
 	};
 	
-	Manager.prototype.randomizationFactor = function (v) {
+	Manager.prototype.randomizationFactor = function(v){
 	  if (!arguments.length) return this._randomizationFactor;
 	  this._randomizationFactor = v;
 	  this.backoff && this.backoff.setJitter(v);
@@ -41187,7 +40834,7 @@
 	 * @api public
 	 */
 	
-	Manager.prototype.reconnectionDelayMax = function (v) {
+	Manager.prototype.reconnectionDelayMax = function(v){
 	  if (!arguments.length) return this._reconnectionDelayMax;
 	  this._reconnectionDelayMax = v;
 	  this.backoff && this.backoff.setMax(v);
@@ -41201,7 +40848,7 @@
 	 * @api public
 	 */
 	
-	Manager.prototype.timeout = function (v) {
+	Manager.prototype.timeout = function(v){
 	  if (!arguments.length) return this._timeout;
 	  this._timeout = v;
 	  return this;
@@ -41214,13 +40861,14 @@
 	 * @api private
 	 */
 	
-	Manager.prototype.maybeReconnectOnOpen = function () {
+	Manager.prototype.maybeReconnectOnOpen = function() {
 	  // Only try to reconnect if it's the first time we're connecting
 	  if (!this.reconnecting && this._reconnection && this.backoff.attempts === 0) {
 	    // keeps reconnection from firing twice for the same reconnection loop
 	    this.reconnect();
 	  }
 	};
+	
 	
 	/**
 	 * Sets the current transport `socket`.
@@ -41231,7 +40879,7 @@
 	 */
 	
 	Manager.prototype.open =
-	Manager.prototype.connect = function (fn, opts) {
+	Manager.prototype.connect = function(fn){
 	  debug('readyState %s', this.readyState);
 	  if (~this.readyState.indexOf('open')) return this;
 	
@@ -41243,13 +40891,13 @@
 	  this.skipReconnect = false;
 	
 	  // emit `open`
-	  var openSub = on(socket, 'open', function () {
+	  var openSub = on(socket, 'open', function() {
 	    self.onopen();
 	    fn && fn();
 	  });
 	
 	  // emit `connect_error`
-	  var errorSub = on(socket, 'error', function (data) {
+	  var errorSub = on(socket, 'error', function(data){
 	    debug('connect_error');
 	    self.cleanup();
 	    self.readyState = 'closed';
@@ -41270,7 +40918,7 @@
 	    debug('connect attempt will timeout after %d', timeout);
 	
 	    // set timer
-	    var timer = setTimeout(function () {
+	    var timer = setTimeout(function(){
 	      debug('connect attempt timed out after %d', timeout);
 	      openSub.destroy();
 	      socket.close();
@@ -41279,7 +40927,7 @@
 	    }, timeout);
 	
 	    this.subs.push({
-	      destroy: function () {
+	      destroy: function(){
 	        clearTimeout(timer);
 	      }
 	    });
@@ -41297,7 +40945,7 @@
 	 * @api private
 	 */
 	
-	Manager.prototype.onopen = function () {
+	Manager.prototype.onopen = function(){
 	  debug('open');
 	
 	  // clear old subs
@@ -41323,8 +40971,8 @@
 	 * @api private
 	 */
 	
-	Manager.prototype.onping = function () {
-	  this.lastPing = new Date();
+	Manager.prototype.onping = function(){
+	  this.lastPing = new Date;
 	  this.emitAll('ping');
 	};
 	
@@ -41334,8 +40982,8 @@
 	 * @api private
 	 */
 	
-	Manager.prototype.onpong = function () {
-	  this.emitAll('pong', new Date() - this.lastPing);
+	Manager.prototype.onpong = function(){
+	  this.emitAll('pong', new Date - this.lastPing);
 	};
 	
 	/**
@@ -41344,7 +40992,7 @@
 	 * @api private
 	 */
 	
-	Manager.prototype.ondata = function (data) {
+	Manager.prototype.ondata = function(data){
 	  this.decoder.add(data);
 	};
 	
@@ -41354,7 +41002,7 @@
 	 * @api private
 	 */
 	
-	Manager.prototype.ondecoded = function (packet) {
+	Manager.prototype.ondecoded = function(packet) {
 	  this.emit('packet', packet);
 	};
 	
@@ -41364,7 +41012,7 @@
 	 * @api private
 	 */
 	
-	Manager.prototype.onerror = function (err) {
+	Manager.prototype.onerror = function(err){
 	  debug('error', err);
 	  this.emitAll('error', err);
 	};
@@ -41376,14 +41024,14 @@
 	 * @api public
 	 */
 	
-	Manager.prototype.socket = function (nsp, opts) {
+	Manager.prototype.socket = function(nsp){
 	  var socket = this.nsps[nsp];
 	  if (!socket) {
-	    socket = new Socket(this, nsp, opts);
+	    socket = new Socket(this, nsp);
 	    this.nsps[nsp] = socket;
 	    var self = this;
 	    socket.on('connecting', onConnecting);
-	    socket.on('connect', function () {
+	    socket.on('connect', function(){
 	      socket.id = self.engine.id;
 	    });
 	
@@ -41393,7 +41041,7 @@
 	    }
 	  }
 	
-	  function onConnecting () {
+	  function onConnecting() {
 	    if (!~indexOf(self.connecting, socket)) {
 	      self.connecting.push(socket);
 	    }
@@ -41408,7 +41056,7 @@
 	 * @param {Socket} socket
 	 */
 	
-	Manager.prototype.destroy = function (socket) {
+	Manager.prototype.destroy = function(socket){
 	  var index = indexOf(this.connecting, socket);
 	  if (~index) this.connecting.splice(index, 1);
 	  if (this.connecting.length) return;
@@ -41423,15 +41071,14 @@
 	 * @api private
 	 */
 	
-	Manager.prototype.packet = function (packet) {
+	Manager.prototype.packet = function(packet){
 	  debug('writing packet %j', packet);
 	  var self = this;
-	  if (packet.query && packet.type === 0) packet.nsp += '?' + packet.query;
 	
 	  if (!self.encoding) {
 	    // encode, then write to engine with result
 	    self.encoding = true;
-	    this.encoder.encode(packet, function (encodedPackets) {
+	    this.encoder.encode(packet, function(encodedPackets) {
 	      for (var i = 0; i < encodedPackets.length; i++) {
 	        self.engine.write(encodedPackets[i], packet.options);
 	      }
@@ -41450,7 +41097,7 @@
 	 * @api private
 	 */
 	
-	Manager.prototype.processPacketQueue = function () {
+	Manager.prototype.processPacketQueue = function() {
 	  if (this.packetBuffer.length > 0 && !this.encoding) {
 	    var pack = this.packetBuffer.shift();
 	    this.packet(pack);
@@ -41463,14 +41110,11 @@
 	 * @api private
 	 */
 	
-	Manager.prototype.cleanup = function () {
+	Manager.prototype.cleanup = function(){
 	  debug('cleanup');
 	
-	  var subsLength = this.subs.length;
-	  for (var i = 0; i < subsLength; i++) {
-	    var sub = this.subs.shift();
-	    sub.destroy();
-	  }
+	  var sub;
+	  while (sub = this.subs.shift()) sub.destroy();
 	
 	  this.packetBuffer = [];
 	  this.encoding = false;
@@ -41486,11 +41130,11 @@
 	 */
 	
 	Manager.prototype.close =
-	Manager.prototype.disconnect = function () {
+	Manager.prototype.disconnect = function(){
 	  debug('disconnect');
 	  this.skipReconnect = true;
 	  this.reconnecting = false;
-	  if ('opening' === this.readyState) {
+	  if ('opening' == this.readyState) {
 	    // `onclose` will not fire because
 	    // an open event never happened
 	    this.cleanup();
@@ -41506,7 +41150,7 @@
 	 * @api private
 	 */
 	
-	Manager.prototype.onclose = function (reason) {
+	Manager.prototype.onclose = function(reason){
 	  debug('onclose');
 	
 	  this.cleanup();
@@ -41525,7 +41169,7 @@
 	 * @api private
 	 */
 	
-	Manager.prototype.reconnect = function () {
+	Manager.prototype.reconnect = function(){
 	  if (this.reconnecting || this.skipReconnect) return this;
 	
 	  var self = this;
@@ -41540,7 +41184,7 @@
 	    debug('will wait %dms before reconnect attempt', delay);
 	
 	    this.reconnecting = true;
-	    var timer = setTimeout(function () {
+	    var timer = setTimeout(function(){
 	      if (self.skipReconnect) return;
 	
 	      debug('attempting reconnect');
@@ -41550,7 +41194,7 @@
 	      // check again for the case socket closed in above events
 	      if (self.skipReconnect) return;
 	
-	      self.open(function (err) {
+	      self.open(function(err){
 	        if (err) {
 	          debug('reconnect attempt error');
 	          self.reconnecting = false;
@@ -41564,7 +41208,7 @@
 	    }, delay);
 	
 	    this.subs.push({
-	      destroy: function () {
+	      destroy: function(){
 	        clearTimeout(timer);
 	      }
 	    });
@@ -41577,7 +41221,7 @@
 	 * @api private
 	 */
 	
-	Manager.prototype.onreconnect = function () {
+	Manager.prototype.onreconnect = function(){
 	  var attempt = this.backoff.attempts;
 	  this.reconnecting = false;
 	  this.backoff.reset();
@@ -41591,7 +41235,7 @@
 /***/ function(module, exports, __webpack_require__) {
 
 	
-	module.exports = __webpack_require__(202);
+	module.exports =  __webpack_require__(202);
 
 
 /***/ },
@@ -41619,19 +41263,27 @@
 	 */
 	
 	var transports = __webpack_require__(204);
-	var Emitter = __webpack_require__(218);
-	var debug = __webpack_require__(222)('engine.io-client:socket');
-	var index = __webpack_require__(228);
+	var Emitter = __webpack_require__(197);
+	var debug = __webpack_require__(190)('engine.io-client:socket');
+	var index = __webpack_require__(224);
 	var parser = __webpack_require__(210);
-	var parseuri = __webpack_require__(186);
-	var parsejson = __webpack_require__(229);
-	var parseqs = __webpack_require__(219);
+	var parseuri = __webpack_require__(189);
+	var parsejson = __webpack_require__(225);
+	var parseqs = __webpack_require__(218);
 	
 	/**
 	 * Module exports.
 	 */
 	
 	module.exports = Socket;
+	
+	/**
+	 * Noop function.
+	 *
+	 * @api private
+	 */
+	
+	function noop(){}
 	
 	/**
 	 * Socket constructor.
@@ -41641,12 +41293,12 @@
 	 * @api public
 	 */
 	
-	function Socket (uri, opts) {
+	function Socket(uri, opts){
 	  if (!(this instanceof Socket)) return new Socket(uri, opts);
 	
 	  opts = opts || {};
 	
-	  if (uri && 'object' === typeof uri) {
+	  if (uri && 'object' == typeof uri) {
 	    opts = uri;
 	    uri = null;
 	  }
@@ -41654,15 +41306,15 @@
 	  if (uri) {
 	    uri = parseuri(uri);
 	    opts.hostname = uri.host;
-	    opts.secure = uri.protocol === 'https' || uri.protocol === 'wss';
+	    opts.secure = uri.protocol == 'https' || uri.protocol == 'wss';
 	    opts.port = uri.port;
 	    if (uri.query) opts.query = uri.query;
 	  } else if (opts.host) {
 	    opts.hostname = parseuri(opts.host).host;
 	  }
 	
-	  this.secure = null != opts.secure ? opts.secure
-	    : (global.location && 'https:' === location.protocol);
+	  this.secure = null != opts.secure ? opts.secure :
+	    (global.location && 'https:' == location.protocol);
 	
 	  if (opts.hostname && !opts.port) {
 	    // if no port is specified manually, use the protocol default
@@ -41672,11 +41324,11 @@
 	  this.agent = opts.agent || false;
 	  this.hostname = opts.hostname ||
 	    (global.location ? location.hostname : 'localhost');
-	  this.port = opts.port || (global.location && location.port
-	      ? location.port
-	      : (this.secure ? 443 : 80));
+	  this.port = opts.port || (global.location && location.port ?
+	       location.port :
+	       (this.secure ? 443 : 80));
 	  this.query = opts.query || {};
-	  if ('string' === typeof this.query) this.query = parseqs.decode(this.query);
+	  if ('string' == typeof this.query) this.query = parseqs.decode(this.query);
 	  this.upgrade = false !== opts.upgrade;
 	  this.path = (opts.path || '/engine.io').replace(/\/$/, '') + '/';
 	  this.forceJSONP = !!opts.forceJSONP;
@@ -41688,7 +41340,6 @@
 	  this.transports = opts.transports || ['polling', 'websocket'];
 	  this.readyState = '';
 	  this.writeBuffer = [];
-	  this.prevBufferLen = 0;
 	  this.policyPort = opts.policyPort || 843;
 	  this.rememberUpgrade = opts.rememberUpgrade || false;
 	  this.binaryType = null;
@@ -41707,30 +41358,15 @@
 	  this.cert = opts.cert || null;
 	  this.ca = opts.ca || null;
 	  this.ciphers = opts.ciphers || null;
-	  this.rejectUnauthorized = opts.rejectUnauthorized === undefined ? null : opts.rejectUnauthorized;
-	  this.forceNode = !!opts.forceNode;
+	  this.rejectUnauthorized = opts.rejectUnauthorized === undefined ? true : opts.rejectUnauthorized;
 	
 	  // other options for Node.js client
-	  var freeGlobal = typeof global === 'object' && global;
+	  var freeGlobal = typeof global == 'object' && global;
 	  if (freeGlobal.global === freeGlobal) {
 	    if (opts.extraHeaders && Object.keys(opts.extraHeaders).length > 0) {
 	      this.extraHeaders = opts.extraHeaders;
 	    }
-	
-	    if (opts.localAddress) {
-	      this.localAddress = opts.localAddress;
-	    }
 	  }
-	
-	  // set on handshake
-	  this.id = null;
-	  this.upgrades = null;
-	  this.pingInterval = null;
-	  this.pingTimeout = null;
-	
-	  // set on heartbeat
-	  this.pingIntervalTimer = null;
-	  this.pingTimeoutTimer = null;
 	
 	  this.open();
 	}
@@ -41805,9 +41441,7 @@
 	    ciphers: this.ciphers,
 	    rejectUnauthorized: this.rejectUnauthorized,
 	    perMessageDeflate: this.perMessageDeflate,
-	    extraHeaders: this.extraHeaders,
-	    forceNode: this.forceNode,
-	    localAddress: this.localAddress
+	    extraHeaders: this.extraHeaders
 	  });
 	
 	  return transport;
@@ -41830,12 +41464,12 @@
 	 */
 	Socket.prototype.open = function () {
 	  var transport;
-	  if (this.rememberUpgrade && Socket.priorWebsocketSuccess && this.transports.indexOf('websocket') !== -1) {
+	  if (this.rememberUpgrade && Socket.priorWebsocketSuccess && this.transports.indexOf('websocket') != -1) {
 	    transport = 'websocket';
 	  } else if (0 === this.transports.length) {
 	    // Emit error on next tick so it can be listened to
 	    var self = this;
-	    setTimeout(function () {
+	    setTimeout(function() {
 	      self.emit('error', 'No transports available');
 	    }, 0);
 	    return;
@@ -41863,7 +41497,7 @@
 	 * @api private
 	 */
 	
-	Socket.prototype.setTransport = function (transport) {
+	Socket.prototype.setTransport = function(transport){
 	  debug('setting transport %s', transport.name);
 	  var self = this;
 	
@@ -41877,16 +41511,16 @@
 	
 	  // set up transport listeners
 	  transport
-	  .on('drain', function () {
+	  .on('drain', function(){
 	    self.onDrain();
 	  })
-	  .on('packet', function (packet) {
+	  .on('packet', function(packet){
 	    self.onPacket(packet);
 	  })
-	  .on('error', function (e) {
+	  .on('error', function(e){
 	    self.onError(e);
 	  })
-	  .on('close', function () {
+	  .on('close', function(){
 	    self.onClose('transport close');
 	  });
 	};
@@ -41900,13 +41534,13 @@
 	
 	Socket.prototype.probe = function (name) {
 	  debug('probing transport "%s"', name);
-	  var transport = this.createTransport(name, { probe: 1 });
-	  var failed = false;
-	  var self = this;
+	  var transport = this.createTransport(name, { probe: 1 })
+	    , failed = false
+	    , self = this;
 	
 	  Socket.priorWebsocketSuccess = false;
 	
-	  function onTransportOpen () {
+	  function onTransportOpen(){
 	    if (self.onlyBinaryUpgrades) {
 	      var upgradeLosesBinary = !this.supportsBinary && self.transport.supportsBinary;
 	      failed = failed || upgradeLosesBinary;
@@ -41917,17 +41551,17 @@
 	    transport.send([{ type: 'ping', data: 'probe' }]);
 	    transport.once('packet', function (msg) {
 	      if (failed) return;
-	      if ('pong' === msg.type && 'probe' === msg.data) {
+	      if ('pong' == msg.type && 'probe' == msg.data) {
 	        debug('probe transport "%s" pong', name);
 	        self.upgrading = true;
 	        self.emit('upgrading', transport);
 	        if (!transport) return;
-	        Socket.priorWebsocketSuccess = 'websocket' === transport.name;
+	        Socket.priorWebsocketSuccess = 'websocket' == transport.name;
 	
 	        debug('pausing current transport "%s"', self.transport.name);
 	        self.transport.pause(function () {
 	          if (failed) return;
-	          if ('closed' === self.readyState) return;
+	          if ('closed' == self.readyState) return;
 	          debug('changing transport and sending upgrade packet');
 	
 	          cleanup();
@@ -41948,7 +41582,7 @@
 	    });
 	  }
 	
-	  function freezeTransport () {
+	  function freezeTransport() {
 	    if (failed) return;
 	
 	    // Any callback called by transport should be ignored since now
@@ -41960,8 +41594,8 @@
 	    transport = null;
 	  }
 	
-	  // Handle any error that happens while probing
-	  function onerror (err) {
+	  //Handle any error that happens while probing
+	  function onerror(err) {
 	    var error = new Error('probe error: ' + err);
 	    error.transport = transport.name;
 	
@@ -41972,25 +41606,25 @@
 	    self.emit('upgradeError', error);
 	  }
 	
-	  function onTransportClose () {
-	    onerror('transport closed');
+	  function onTransportClose(){
+	    onerror("transport closed");
 	  }
 	
-	  // When the socket is closed while we're probing
-	  function onclose () {
-	    onerror('socket closed');
+	  //When the socket is closed while we're probing
+	  function onclose(){
+	    onerror("socket closed");
 	  }
 	
-	  // When the socket is upgraded while we're probing
-	  function onupgrade (to) {
-	    if (transport && to.name !== transport.name) {
+	  //When the socket is upgraded while we're probing
+	  function onupgrade(to){
+	    if (transport && to.name != transport.name) {
 	      debug('"%s" works - aborting "%s"', to.name, transport.name);
 	      freezeTransport();
 	    }
 	  }
 	
-	  // Remove all listeners on the transport and on self
-	  function cleanup () {
+	  //Remove all listeners on the transport and on self
+	  function cleanup(){
 	    transport.removeListener('open', onTransportOpen);
 	    transport.removeListener('error', onerror);
 	    transport.removeListener('close', onTransportClose);
@@ -42006,6 +41640,7 @@
 	  this.once('upgrading', onupgrade);
 	
 	  transport.open();
+	
 	};
 	
 	/**
@@ -42017,13 +41652,13 @@
 	Socket.prototype.onOpen = function () {
 	  debug('socket open');
 	  this.readyState = 'open';
-	  Socket.priorWebsocketSuccess = 'websocket' === this.transport.name;
+	  Socket.priorWebsocketSuccess = 'websocket' == this.transport.name;
 	  this.emit('open');
 	  this.flush();
 	
 	  // we check for `readyState` in case an `open`
 	  // listener already closed the socket
-	  if ('open' === this.readyState && this.upgrade && this.transport.pause) {
+	  if ('open' == this.readyState && this.upgrade && this.transport.pause) {
 	    debug('starting upgrade probes');
 	    for (var i = 0, l = this.upgrades.length; i < l; i++) {
 	      this.probe(this.upgrades[i]);
@@ -42038,8 +41673,7 @@
 	 */
 	
 	Socket.prototype.onPacket = function (packet) {
-	  if ('opening' === this.readyState || 'open' === this.readyState ||
-	      'closing' === this.readyState) {
+	  if ('opening' == this.readyState || 'open' == this.readyState) {
 	    debug('socket receive: type "%s", data "%s"', packet.type, packet.data);
 	
 	    this.emit('packet', packet);
@@ -42089,7 +41723,7 @@
 	  this.pingTimeout = data.pingTimeout;
 	  this.onOpen();
 	  // In case open handler closes socket
-	  if ('closed' === this.readyState) return;
+	  if  ('closed' == this.readyState) return;
 	  this.setPing();
 	
 	  // Prolong liveness of socket on heartbeat
@@ -42107,7 +41741,7 @@
 	  clearTimeout(this.pingTimeoutTimer);
 	  var self = this;
 	  self.pingTimeoutTimer = setTimeout(function () {
-	    if ('closed' === self.readyState) return;
+	    if ('closed' == self.readyState) return;
 	    self.onClose('ping timeout');
 	  }, timeout || (self.pingInterval + self.pingTimeout));
 	};
@@ -42137,7 +41771,7 @@
 	
 	Socket.prototype.ping = function () {
 	  var self = this;
-	  this.sendPacket('ping', function () {
+	  this.sendPacket('ping', function(){
 	    self.emit('ping');
 	  });
 	};
@@ -42148,7 +41782,7 @@
 	 * @api private
 	 */
 	
-	Socket.prototype.onDrain = function () {
+	Socket.prototype.onDrain = function() {
 	  this.writeBuffer.splice(0, this.prevBufferLen);
 	
 	  // setting prevBufferLen = 0 is very important
@@ -42170,7 +41804,7 @@
 	 */
 	
 	Socket.prototype.flush = function () {
-	  if ('closed' !== this.readyState && this.transport.writable &&
+	  if ('closed' != this.readyState && this.transport.writable &&
 	    !this.upgrading && this.writeBuffer.length) {
 	    debug('flushing %d packets in socket', this.writeBuffer.length);
 	    this.transport.send(this.writeBuffer);
@@ -42208,17 +41842,17 @@
 	 */
 	
 	Socket.prototype.sendPacket = function (type, data, options, fn) {
-	  if ('function' === typeof data) {
+	  if('function' == typeof data) {
 	    fn = data;
 	    data = undefined;
 	  }
 	
-	  if ('function' === typeof options) {
+	  if ('function' == typeof options) {
 	    fn = options;
 	    options = null;
 	  }
 	
-	  if ('closing' === this.readyState || 'closed' === this.readyState) {
+	  if ('closing' == this.readyState || 'closed' == this.readyState) {
 	    return;
 	  }
 	
@@ -42243,13 +41877,13 @@
 	 */
 	
 	Socket.prototype.close = function () {
-	  if ('opening' === this.readyState || 'open' === this.readyState) {
+	  if ('opening' == this.readyState || 'open' == this.readyState) {
 	    this.readyState = 'closing';
 	
 	    var self = this;
 	
 	    if (this.writeBuffer.length) {
-	      this.once('drain', function () {
+	      this.once('drain', function() {
 	        if (this.upgrading) {
 	          waitForUpgrade();
 	        } else {
@@ -42263,19 +41897,19 @@
 	    }
 	  }
 	
-	  function close () {
+	  function close() {
 	    self.onClose('forced close');
 	    debug('socket closing - telling transport to close');
 	    self.transport.close();
 	  }
 	
-	  function cleanupAndClose () {
+	  function cleanupAndClose() {
 	    self.removeListener('upgrade', cleanupAndClose);
 	    self.removeListener('upgradeError', cleanupAndClose);
 	    close();
 	  }
 	
-	  function waitForUpgrade () {
+	  function waitForUpgrade() {
 	    // wait for upgrade to finish since we can't send packets while pausing a transport
 	    self.once('upgrade', cleanupAndClose);
 	    self.once('upgradeError', cleanupAndClose);
@@ -42304,7 +41938,7 @@
 	 */
 	
 	Socket.prototype.onClose = function (reason, desc) {
-	  if ('opening' === this.readyState || 'open' === this.readyState || 'closing' === this.readyState) {
+	  if ('opening' == this.readyState || 'open' == this.readyState || 'closing' == this.readyState) {
 	    debug('socket close with reason: "%s"', reason);
 	    var self = this;
 	
@@ -42347,7 +41981,7 @@
 	
 	Socket.prototype.filterUpgrades = function (upgrades) {
 	  var filteredUpgrades = [];
-	  for (var i = 0, j = upgrades.length; i < j; i++) {
+	  for (var i = 0, j = upgrades.length; i<j; i++) {
 	    if (~index(this.transports, upgrades[i])) filteredUpgrades.push(upgrades[i]);
 	  }
 	  return filteredUpgrades;
@@ -42365,8 +41999,8 @@
 	
 	var XMLHttpRequest = __webpack_require__(205);
 	var XHR = __webpack_require__(207);
-	var JSONP = __webpack_require__(225);
-	var websocket = __webpack_require__(226);
+	var JSONP = __webpack_require__(221);
+	var websocket = __webpack_require__(222);
 	
 	/**
 	 * Export transports.
@@ -42382,14 +42016,14 @@
 	 * @api private
 	 */
 	
-	function polling (opts) {
+	function polling(opts){
 	  var xhr;
 	  var xd = false;
 	  var xs = false;
 	  var jsonp = false !== opts.jsonp;
 	
 	  if (global.location) {
-	    var isSSL = 'https:' === location.protocol;
+	    var isSSL = 'https:' == location.protocol;
 	    var port = location.port;
 	
 	    // some user agents have empty `location.port`
@@ -42397,8 +42031,8 @@
 	      port = isSSL ? 443 : 80;
 	    }
 	
-	    xd = opts.hostname !== location.hostname || port !== opts.port;
-	    xs = opts.secure !== isSSL;
+	    xd = opts.hostname != location.hostname || port != opts.port;
+	    xs = opts.secure != isSSL;
 	  }
 	
 	  opts.xdomain = xd;
@@ -42419,11 +42053,10 @@
 /* 205 */
 /***/ function(module, exports, __webpack_require__) {
 
-	/* WEBPACK VAR INJECTION */(function(global) {// browser shim for xmlhttprequest module
-	
+	// browser shim for xmlhttprequest module
 	var hasCORS = __webpack_require__(206);
 	
-	module.exports = function (opts) {
+	module.exports = function(opts) {
 	  var xdomain = opts.xdomain;
 	
 	  // scheme must be same when usign XDomainRequest
@@ -42436,7 +42069,7 @@
 	
 	  // XMLHttpRequest can be disabled on IE
 	  try {
-	    if ('undefined' !== typeof XMLHttpRequest && (!xdomain || hasCORS)) {
+	    if ('undefined' != typeof XMLHttpRequest && (!xdomain || hasCORS)) {
 	      return new XMLHttpRequest();
 	    }
 	  } catch (e) { }
@@ -42445,19 +42078,18 @@
 	  // because loading bar keeps flashing when using jsonp-polling
 	  // https://github.com/yujiosaka/socke.io-ie8-loading-example
 	  try {
-	    if ('undefined' !== typeof XDomainRequest && !xscheme && enablesXDR) {
+	    if ('undefined' != typeof XDomainRequest && !xscheme && enablesXDR) {
 	      return new XDomainRequest();
 	    }
 	  } catch (e) { }
 	
 	  if (!xdomain) {
 	    try {
-	      return new global[['Active'].concat('Object').join('X')]('Microsoft.XMLHTTP');
-	    } catch (e) { }
+	      return new ActiveXObject('Microsoft.XMLHTTP');
+	    } catch(e) { }
 	  }
-	};
-	
-	/* WEBPACK VAR INJECTION */}.call(exports, (function() { return this; }())))
+	}
+
 
 /***/ },
 /* 206 */
@@ -42492,9 +42124,9 @@
 	
 	var XMLHttpRequest = __webpack_require__(205);
 	var Polling = __webpack_require__(208);
-	var Emitter = __webpack_require__(218);
-	var inherit = __webpack_require__(220);
-	var debug = __webpack_require__(222)('engine.io-client:polling-xhr');
+	var Emitter = __webpack_require__(197);
+	var inherit = __webpack_require__(219);
+	var debug = __webpack_require__(190)('engine.io-client:polling-xhr');
 	
 	/**
 	 * Module exports.
@@ -42507,7 +42139,7 @@
 	 * Empty function
 	 */
 	
-	function empty () {}
+	function empty(){}
 	
 	/**
 	 * XHR Polling constructor.
@@ -42516,12 +42148,11 @@
 	 * @api public
 	 */
 	
-	function XHR (opts) {
+	function XHR(opts){
 	  Polling.call(this, opts);
-	  this.requestTimeout = opts.requestTimeout;
 	
 	  if (global.location) {
-	    var isSSL = 'https:' === location.protocol;
+	    var isSSL = 'https:' == location.protocol;
 	    var port = location.port;
 	
 	    // some user agents have empty `location.port`
@@ -42529,9 +42160,9 @@
 	      port = isSSL ? 443 : 80;
 	    }
 	
-	    this.xd = opts.hostname !== global.location.hostname ||
-	      port !== opts.port;
-	    this.xs = opts.secure !== isSSL;
+	    this.xd = opts.hostname != global.location.hostname ||
+	      port != opts.port;
+	    this.xs = opts.secure != isSSL;
 	  } else {
 	    this.extraHeaders = opts.extraHeaders;
 	  }
@@ -42556,7 +42187,7 @@
 	 * @api private
 	 */
 	
-	XHR.prototype.request = function (opts) {
+	XHR.prototype.request = function(opts){
 	  opts = opts || {};
 	  opts.uri = this.uri();
 	  opts.xd = this.xd;
@@ -42573,7 +42204,6 @@
 	  opts.ca = this.ca;
 	  opts.ciphers = this.ciphers;
 	  opts.rejectUnauthorized = this.rejectUnauthorized;
-	  opts.requestTimeout = this.requestTimeout;
 	
 	  // other options for Node.js client
 	  opts.extraHeaders = this.extraHeaders;
@@ -42589,12 +42219,12 @@
 	 * @api private
 	 */
 	
-	XHR.prototype.doWrite = function (data, fn) {
+	XHR.prototype.doWrite = function(data, fn){
 	  var isBinary = typeof data !== 'string' && data !== undefined;
 	  var req = this.request({ method: 'POST', data: data, isBinary: isBinary });
 	  var self = this;
 	  req.on('success', fn);
-	  req.on('error', function (err) {
+	  req.on('error', function(err){
 	    self.onError('xhr post error', err);
 	  });
 	  this.sendXhr = req;
@@ -42606,14 +42236,14 @@
 	 * @api private
 	 */
 	
-	XHR.prototype.doPoll = function () {
+	XHR.prototype.doPoll = function(){
 	  debug('xhr poll');
 	  var req = this.request();
 	  var self = this;
-	  req.on('data', function (data) {
+	  req.on('data', function(data){
 	    self.onData(data);
 	  });
-	  req.on('error', function (err) {
+	  req.on('error', function(err){
 	    self.onError('xhr poll error', err);
 	  });
 	  this.pollXhr = req;
@@ -42626,18 +42256,17 @@
 	 * @api public
 	 */
 	
-	function Request (opts) {
+	function Request(opts){
 	  this.method = opts.method || 'GET';
 	  this.uri = opts.uri;
 	  this.xd = !!opts.xd;
 	  this.xs = !!opts.xs;
 	  this.async = false !== opts.async;
-	  this.data = undefined !== opts.data ? opts.data : null;
+	  this.data = undefined != opts.data ? opts.data : null;
 	  this.agent = opts.agent;
 	  this.isBinary = opts.isBinary;
 	  this.supportsBinary = opts.supportsBinary;
 	  this.enablesXDR = opts.enablesXDR;
-	  this.requestTimeout = opts.requestTimeout;
 	
 	  // SSL options for Node.js client
 	  this.pfx = opts.pfx;
@@ -42666,7 +42295,7 @@
 	 * @api private
 	 */
 	
-	Request.prototype.create = function () {
+	Request.prototype.create = function(){
 	  var opts = { agent: this.agent, xdomain: this.xd, xscheme: this.xs, enablesXDR: this.enablesXDR };
 	
 	  // SSL options for Node.js client
@@ -42700,7 +42329,7 @@
 	      xhr.responseType = 'arraybuffer';
 	    }
 	
-	    if ('POST' === this.method) {
+	    if ('POST' == this.method) {
 	      try {
 	        if (this.isBinary) {
 	          xhr.setRequestHeader('Content-type', 'application/octet-stream');
@@ -42710,35 +42339,27 @@
 	      } catch (e) {}
 	    }
 	
-	    try {
-	      xhr.setRequestHeader('Accept', '*/*');
-	    } catch (e) {}
-	
 	    // ie6 check
 	    if ('withCredentials' in xhr) {
 	      xhr.withCredentials = true;
 	    }
 	
-	    if (this.requestTimeout) {
-	      xhr.timeout = this.requestTimeout;
-	    }
-	
 	    if (this.hasXDR()) {
-	      xhr.onload = function () {
+	      xhr.onload = function(){
 	        self.onLoad();
 	      };
-	      xhr.onerror = function () {
+	      xhr.onerror = function(){
 	        self.onError(xhr.responseText);
 	      };
 	    } else {
-	      xhr.onreadystatechange = function () {
-	        if (4 !== xhr.readyState) return;
-	        if (200 === xhr.status || 1223 === xhr.status) {
+	      xhr.onreadystatechange = function(){
+	        if (4 != xhr.readyState) return;
+	        if (200 == xhr.status || 1223 == xhr.status) {
 	          self.onLoad();
 	        } else {
 	          // make sure the `error` event handler that's user-set
 	          // does not throw in the same tick and gets caught here
-	          setTimeout(function () {
+	          setTimeout(function(){
 	            self.onError(xhr.status);
 	          }, 0);
 	        }
@@ -42751,7 +42372,7 @@
 	    // Need to defer since .create() is called directly fhrom the constructor
 	    // and thus the 'error' event can only be only bound *after* this exception
 	    // occurs.  Therefore, also, we cannot throw here at all.
-	    setTimeout(function () {
+	    setTimeout(function() {
 	      self.onError(e);
 	    }, 0);
 	    return;
@@ -42769,7 +42390,7 @@
 	 * @api private
 	 */
 	
-	Request.prototype.onSuccess = function () {
+	Request.prototype.onSuccess = function(){
 	  this.emit('success');
 	  this.cleanup();
 	};
@@ -42780,7 +42401,7 @@
 	 * @api private
 	 */
 	
-	Request.prototype.onData = function (data) {
+	Request.prototype.onData = function(data){
 	  this.emit('data', data);
 	  this.onSuccess();
 	};
@@ -42791,7 +42412,7 @@
 	 * @api private
 	 */
 	
-	Request.prototype.onError = function (err) {
+	Request.prototype.onError = function(err){
 	  this.emit('error', err);
 	  this.cleanup(true);
 	};
@@ -42802,8 +42423,8 @@
 	 * @api private
 	 */
 	
-	Request.prototype.cleanup = function (fromError) {
-	  if ('undefined' === typeof this.xhr || null === this.xhr) {
+	Request.prototype.cleanup = function(fromError){
+	  if ('undefined' == typeof this.xhr || null === this.xhr) {
 	    return;
 	  }
 	  // xmlhttprequest
@@ -42816,7 +42437,7 @@
 	  if (fromError) {
 	    try {
 	      this.xhr.abort();
-	    } catch (e) {}
+	    } catch(e) {}
 	  }
 	
 	  if (global.document) {
@@ -42832,7 +42453,7 @@
 	 * @api private
 	 */
 	
-	Request.prototype.onLoad = function () {
+	Request.prototype.onLoad = function(){
 	  var data;
 	  try {
 	    var contentType;
@@ -42840,7 +42461,7 @@
 	      contentType = this.xhr.getResponseHeader('Content-Type').split(';')[0];
 	    } catch (e) {}
 	    if (contentType === 'application/octet-stream') {
-	      data = this.xhr.response || this.xhr.responseText;
+	      data = this.xhr.response;
 	    } else {
 	      if (!this.supportsBinary) {
 	        data = this.xhr.responseText;
@@ -42872,7 +42493,7 @@
 	 * @api private
 	 */
 	
-	Request.prototype.hasXDR = function () {
+	Request.prototype.hasXDR = function(){
 	  return 'undefined' !== typeof global.XDomainRequest && !this.xs && this.enablesXDR;
 	};
 	
@@ -42882,7 +42503,7 @@
 	 * @api public
 	 */
 	
-	Request.prototype.abort = function () {
+	Request.prototype.abort = function(){
 	  this.cleanup();
 	};
 	
@@ -42892,10 +42513,9 @@
 	 * emitted.
 	 */
 	
-	Request.requestsCount = 0;
-	Request.requests = {};
-	
 	if (global.document) {
+	  Request.requestsCount = 0;
+	  Request.requests = {};
 	  if (global.attachEvent) {
 	    global.attachEvent('onunload', unloadHandler);
 	  } else if (global.addEventListener) {
@@ -42903,7 +42523,7 @@
 	  }
 	}
 	
-	function unloadHandler () {
+	function unloadHandler() {
 	  for (var i in Request.requests) {
 	    if (Request.requests.hasOwnProperty(i)) {
 	      Request.requests[i].abort();
@@ -42922,11 +42542,11 @@
 	 */
 	
 	var Transport = __webpack_require__(209);
-	var parseqs = __webpack_require__(219);
+	var parseqs = __webpack_require__(218);
 	var parser = __webpack_require__(210);
-	var inherit = __webpack_require__(220);
-	var yeast = __webpack_require__(221);
-	var debug = __webpack_require__(222)('engine.io-client:polling');
+	var inherit = __webpack_require__(219);
+	var yeast = __webpack_require__(220);
+	var debug = __webpack_require__(190)('engine.io-client:polling');
 	
 	/**
 	 * Module exports.
@@ -42938,7 +42558,7 @@
 	 * Is XHR2 supported?
 	 */
 	
-	var hasXHR2 = (function () {
+	var hasXHR2 = (function() {
 	  var XMLHttpRequest = __webpack_require__(205);
 	  var xhr = new XMLHttpRequest({ xdomain: false });
 	  return null != xhr.responseType;
@@ -42951,7 +42571,7 @@
 	 * @api private
 	 */
 	
-	function Polling (opts) {
+	function Polling(opts){
 	  var forceBase64 = (opts && opts.forceBase64);
 	  if (!hasXHR2 || forceBase64) {
 	    this.supportsBinary = false;
@@ -42978,7 +42598,7 @@
 	 * @api private
 	 */
 	
-	Polling.prototype.doOpen = function () {
+	Polling.prototype.doOpen = function(){
 	  this.poll();
 	};
 	
@@ -42989,12 +42609,13 @@
 	 * @api private
 	 */
 	
-	Polling.prototype.pause = function (onPause) {
+	Polling.prototype.pause = function(onPause){
+	  var pending = 0;
 	  var self = this;
 	
 	  this.readyState = 'pausing';
 	
-	  function pause () {
+	  function pause(){
 	    debug('paused');
 	    self.readyState = 'paused';
 	    onPause();
@@ -43006,7 +42627,7 @@
 	    if (this.polling) {
 	      debug('we are currently polling - waiting to pause');
 	      total++;
-	      this.once('pollComplete', function () {
+	      this.once('pollComplete', function(){
 	        debug('pre-pause polling complete');
 	        --total || pause();
 	      });
@@ -43015,7 +42636,7 @@
 	    if (!this.writable) {
 	      debug('we are currently writing - waiting to pause');
 	      total++;
-	      this.once('drain', function () {
+	      this.once('drain', function(){
 	        debug('pre-pause writing complete');
 	        --total || pause();
 	      });
@@ -43031,7 +42652,7 @@
 	 * @api public
 	 */
 	
-	Polling.prototype.poll = function () {
+	Polling.prototype.poll = function(){
 	  debug('polling');
 	  this.polling = true;
 	  this.doPoll();
@@ -43044,17 +42665,17 @@
 	 * @api private
 	 */
 	
-	Polling.prototype.onData = function (data) {
+	Polling.prototype.onData = function(data){
 	  var self = this;
 	  debug('polling got data %s', data);
-	  var callback = function (packet, index, total) {
+	  var callback = function(packet, index, total) {
 	    // if its the first message we consider the transport open
-	    if ('opening' === self.readyState) {
+	    if ('opening' == self.readyState) {
 	      self.onOpen();
 	    }
 	
 	    // if its a close packet, we close the ongoing requests
-	    if ('close' === packet.type) {
+	    if ('close' == packet.type) {
 	      self.onClose();
 	      return false;
 	    }
@@ -43067,12 +42688,12 @@
 	  parser.decodePayload(data, this.socket.binaryType, callback);
 	
 	  // if an event did not trigger closing
-	  if ('closed' !== this.readyState) {
+	  if ('closed' != this.readyState) {
 	    // if we got data we're not polling
 	    this.polling = false;
 	    this.emit('pollComplete');
 	
-	    if ('open' === this.readyState) {
+	    if ('open' == this.readyState) {
 	      this.poll();
 	    } else {
 	      debug('ignoring poll - transport state "%s"', this.readyState);
@@ -43086,15 +42707,15 @@
 	 * @api private
 	 */
 	
-	Polling.prototype.doClose = function () {
+	Polling.prototype.doClose = function(){
 	  var self = this;
 	
-	  function close () {
+	  function close(){
 	    debug('writing close packet');
 	    self.write([{ type: 'close' }]);
 	  }
 	
-	  if ('open' === this.readyState) {
+	  if ('open' == this.readyState) {
 	    debug('transport open - closing');
 	    close();
 	  } else {
@@ -43113,15 +42734,16 @@
 	 * @api private
 	 */
 	
-	Polling.prototype.write = function (packets) {
+	Polling.prototype.write = function(packets){
 	  var self = this;
 	  this.writable = false;
-	  var callbackfn = function () {
+	  var callbackfn = function() {
 	    self.writable = true;
 	    self.emit('drain');
 	  };
 	
-	  parser.encodePayload(packets, this.supportsBinary, function (data) {
+	  var self = this;
+	  parser.encodePayload(packets, this.supportsBinary, function(data) {
 	    self.doWrite(data, callbackfn);
 	  });
 	};
@@ -43132,7 +42754,7 @@
 	 * @api private
 	 */
 	
-	Polling.prototype.uri = function () {
+	Polling.prototype.uri = function(){
 	  var query = this.query || {};
 	  var schema = this.secure ? 'https' : 'http';
 	  var port = '';
@@ -43149,8 +42771,8 @@
 	  query = parseqs.encode(query);
 	
 	  // avoid port if default for schema
-	  if (this.port && (('https' === schema && Number(this.port) !== 443) ||
-	     ('http' === schema && Number(this.port) !== 80))) {
+	  if (this.port && (('https' == schema && this.port != 443) ||
+	     ('http' == schema && this.port != 80))) {
 	    port = ':' + this.port;
 	  }
 	
@@ -43173,7 +42795,7 @@
 	 */
 	
 	var parser = __webpack_require__(210);
-	var Emitter = __webpack_require__(218);
+	var Emitter = __webpack_require__(197);
 	
 	/**
 	 * Module exports.
@@ -43209,11 +42831,9 @@
 	  this.ca = opts.ca;
 	  this.ciphers = opts.ciphers;
 	  this.rejectUnauthorized = opts.rejectUnauthorized;
-	  this.forceNode = opts.forceNode;
 	
 	  // other options for Node.js client
 	  this.extraHeaders = opts.extraHeaders;
-	  this.localAddress = opts.localAddress;
 	}
 	
 	/**
@@ -43245,7 +42865,7 @@
 	 */
 	
 	Transport.prototype.open = function () {
-	  if ('closed' === this.readyState || '' === this.readyState) {
+	  if ('closed' == this.readyState || '' == this.readyState) {
 	    this.readyState = 'opening';
 	    this.doOpen();
 	  }
@@ -43260,7 +42880,7 @@
 	 */
 	
 	Transport.prototype.close = function () {
-	  if ('opening' === this.readyState || 'open' === this.readyState) {
+	  if ('opening' == this.readyState || 'open' == this.readyState) {
 	    this.doClose();
 	    this.onClose();
 	  }
@@ -43275,8 +42895,8 @@
 	 * @api private
 	 */
 	
-	Transport.prototype.send = function (packets) {
-	  if ('open' === this.readyState) {
+	Transport.prototype.send = function(packets){
+	  if ('open' == this.readyState) {
 	    this.write(packets);
 	  } else {
 	    throw new Error('Transport not open');
@@ -43302,7 +42922,7 @@
 	 * @api private
 	 */
 	
-	Transport.prototype.onData = function (data) {
+	Transport.prototype.onData = function(data){
 	  var packet = parser.decodePacket(data, this.socket.binaryType);
 	  this.onPacket(packet);
 	};
@@ -43338,13 +42958,9 @@
 	var keys = __webpack_require__(211);
 	var hasBinary = __webpack_require__(212);
 	var sliceBuffer = __webpack_require__(213);
-	var after = __webpack_require__(214);
-	var utf8 = __webpack_require__(215);
-	
-	var base64encoder;
-	if (global && global.ArrayBuffer) {
-	  base64encoder = __webpack_require__(216);
-	}
+	var base64encoder = __webpack_require__(214);
+	var after = __webpack_require__(215);
+	var utf8 = __webpack_require__(216);
 	
 	/**
 	 * Check if we are running an android browser. That requires us to use
@@ -43353,7 +42969,7 @@
 	 * http://ghinda.net/jpeg-blob-ajax-android/
 	 */
 	
-	var isAndroid = typeof navigator !== 'undefined' && /Android/i.test(navigator.userAgent);
+	var isAndroid = navigator.userAgent.match(/Android/i);
 	
 	/**
 	 * Check if we are running in PhantomJS.
@@ -43361,7 +42977,7 @@
 	 * https://github.com/ariya/phantomjs/issues/11395
 	 * @type boolean
 	 */
-	var isPhantomJS = typeof navigator !== 'undefined' && /PhantomJS/i.test(navigator.userAgent);
+	var isPhantomJS = /PhantomJS/i.test(navigator.userAgent);
 	
 	/**
 	 * When true, avoids using Blobs to encode payloads.
@@ -43555,18 +43171,16 @@
 	 */
 	
 	exports.decodePacket = function (data, binaryType, utf8decode) {
-	  if (data === undefined) {
-	    return err;
-	  }
 	  // String data
-	  if (typeof data == 'string') {
+	  if (typeof data == 'string' || data === undefined) {
 	    if (data.charAt(0) == 'b') {
 	      return exports.decodeBase64Packet(data.substr(1), binaryType);
 	    }
 	
 	    if (utf8decode) {
-	      data = tryDecode(data);
-	      if (data === false) {
+	      try {
+	        data = utf8.decode(data);
+	      } catch (e) {
 	        return err;
 	      }
 	    }
@@ -43592,15 +43206,6 @@
 	  return { type: packetslist[type], data: rest };
 	};
 	
-	function tryDecode(data) {
-	  try {
-	    data = utf8.decode(data);
-	  } catch (e) {
-	    return false;
-	  }
-	  return data;
-	}
-	
 	/**
 	 * Decodes a packet encoded in a base64 string
 	 *
@@ -43610,7 +43215,7 @@
 	
 	exports.decodeBase64Packet = function(msg, binaryType) {
 	  var type = packetslist[msg.charAt(0)];
-	  if (!base64encoder) {
+	  if (!global.ArrayBuffer) {
 	    return { type: type, data: { base64: true, data: msg.substr(1) } };
 	  }
 	
@@ -43977,7 +43582,7 @@
 	 * Module requirements.
 	 */
 	
-	var isArray = __webpack_require__(198);
+	var isArray = __webpack_require__(196);
 	
 	/**
 	 * Module exports.
@@ -43999,7 +43604,7 @@
 	  function _hasBinary(obj) {
 	    if (!obj) return false;
 	
-	    if ( (global.Buffer && global.Buffer.isBuffer && global.Buffer.isBuffer(obj)) ||
+	    if ( (global.Buffer && global.Buffer.isBuffer(obj)) ||
 	         (global.ArrayBuffer && obj instanceof ArrayBuffer) ||
 	         (global.Blob && obj instanceof Blob) ||
 	         (global.File && obj instanceof File)
@@ -44014,8 +43619,7 @@
 	          }
 	      }
 	    } else if (obj && 'object' == typeof obj) {
-	      // see: https://github.com/Automattic/has-binary/pull/4
-	      if (obj.toJSON && 'function' == typeof obj.toJSON) {
+	      if (obj.toJSON) {
 	        obj = obj.toJSON();
 	      }
 	
@@ -44073,6 +43677,71 @@
 /* 214 */
 /***/ function(module, exports) {
 
+	/*
+	 * base64-arraybuffer
+	 * https://github.com/niklasvh/base64-arraybuffer
+	 *
+	 * Copyright (c) 2012 Niklas von Hertzen
+	 * Licensed under the MIT license.
+	 */
+	(function(chars){
+	  "use strict";
+	
+	  exports.encode = function(arraybuffer) {
+	    var bytes = new Uint8Array(arraybuffer),
+	    i, len = bytes.length, base64 = "";
+	
+	    for (i = 0; i < len; i+=3) {
+	      base64 += chars[bytes[i] >> 2];
+	      base64 += chars[((bytes[i] & 3) << 4) | (bytes[i + 1] >> 4)];
+	      base64 += chars[((bytes[i + 1] & 15) << 2) | (bytes[i + 2] >> 6)];
+	      base64 += chars[bytes[i + 2] & 63];
+	    }
+	
+	    if ((len % 3) === 2) {
+	      base64 = base64.substring(0, base64.length - 1) + "=";
+	    } else if (len % 3 === 1) {
+	      base64 = base64.substring(0, base64.length - 2) + "==";
+	    }
+	
+	    return base64;
+	  };
+	
+	  exports.decode =  function(base64) {
+	    var bufferLength = base64.length * 0.75,
+	    len = base64.length, i, p = 0,
+	    encoded1, encoded2, encoded3, encoded4;
+	
+	    if (base64[base64.length - 1] === "=") {
+	      bufferLength--;
+	      if (base64[base64.length - 2] === "=") {
+	        bufferLength--;
+	      }
+	    }
+	
+	    var arraybuffer = new ArrayBuffer(bufferLength),
+	    bytes = new Uint8Array(arraybuffer);
+	
+	    for (i = 0; i < len; i+=4) {
+	      encoded1 = chars.indexOf(base64[i]);
+	      encoded2 = chars.indexOf(base64[i+1]);
+	      encoded3 = chars.indexOf(base64[i+2]);
+	      encoded4 = chars.indexOf(base64[i+3]);
+	
+	      bytes[p++] = (encoded1 << 2) | (encoded2 >> 4);
+	      bytes[p++] = ((encoded2 & 15) << 4) | (encoded3 >> 2);
+	      bytes[p++] = ((encoded3 & 3) << 6) | (encoded4 & 63);
+	    }
+	
+	    return arraybuffer;
+	  };
+	})("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/");
+
+
+/***/ },
+/* 215 */
+/***/ function(module, exports) {
+
 	module.exports = after
 	
 	function after(count, callback, err_cb) {
@@ -44104,10 +43773,10 @@
 
 
 /***/ },
-/* 215 */
+/* 216 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var __WEBPACK_AMD_DEFINE_RESULT__;/* WEBPACK VAR INJECTION */(function(module, global) {/*! https://mths.be/wtf8 v1.0.0 by @mathias */
+	var __WEBPACK_AMD_DEFINE_RESULT__;/* WEBPACK VAR INJECTION */(function(module, global) {/*! https://mths.be/utf8js v2.0.0 by @mathias */
 	;(function(root) {
 	
 		// Detect free variables `exports`
@@ -44173,6 +43842,14 @@
 			return output;
 		}
 	
+		function checkScalarValue(codePoint) {
+			if (codePoint >= 0xD800 && codePoint <= 0xDFFF) {
+				throw Error(
+					'Lone surrogate U+' + codePoint.toString(16).toUpperCase() +
+					' is not a scalar value'
+				);
+			}
+		}
 		/*--------------------------------------------------------------------------*/
 	
 		function createByte(codePoint, shift) {
@@ -44188,6 +43865,7 @@
 				symbol = stringFromCharCode(((codePoint >> 6) & 0x1F) | 0xC0);
 			}
 			else if ((codePoint & 0xFFFF0000) == 0) { // 3-byte sequence
+				checkScalarValue(codePoint);
 				symbol = stringFromCharCode(((codePoint >> 12) & 0x0F) | 0xE0);
 				symbol += createByte(codePoint, 6);
 			}
@@ -44200,7 +43878,7 @@
 			return symbol;
 		}
 	
-		function wtf8encode(string) {
+		function utf8encode(string) {
 			var codePoints = ucs2decode(string);
 			var length = codePoints.length;
 			var index = -1;
@@ -44227,7 +43905,7 @@
 				return continuationByte & 0x3F;
 			}
 	
-			// If we end up here, it’s not a continuation byte.
+			// If we end up here, it’s not a continuation byte
 			throw Error('Invalid continuation byte');
 		}
 	
@@ -44246,7 +43924,7 @@
 				return false;
 			}
 	
-			// Read the first byte.
+			// Read first byte
 			byte1 = byteArray[byteIndex] & 0xFF;
 			byteIndex++;
 	
@@ -44272,6 +43950,7 @@
 				byte3 = readContinuationByte();
 				codePoint = ((byte1 & 0x0F) << 12) | (byte2 << 6) | byte3;
 				if (codePoint >= 0x0800) {
+					checkScalarValue(codePoint);
 					return codePoint;
 				} else {
 					throw Error('Invalid continuation byte');
@@ -44290,13 +43969,13 @@
 				}
 			}
 	
-			throw Error('Invalid WTF-8 detected');
+			throw Error('Invalid UTF-8 detected');
 		}
 	
 		var byteArray;
 		var byteCount;
 		var byteIndex;
-		function wtf8decode(byteString) {
+		function utf8decode(byteString) {
 			byteArray = ucs2decode(byteString);
 			byteCount = byteArray.length;
 			byteIndex = 0;
@@ -44310,10 +43989,10 @@
 	
 		/*--------------------------------------------------------------------------*/
 	
-		var wtf8 = {
-			'version': '1.0.0',
-			'encode': wtf8encode,
-			'decode': wtf8decode
+		var utf8 = {
+			'version': '2.0.0',
+			'encode': utf8encode,
+			'decode': utf8decode
 		};
 	
 		// Some AMD build optimizers, like r.js, check for specific condition patterns
@@ -44322,98 +44001,25 @@
 			true
 		) {
 			!(__WEBPACK_AMD_DEFINE_RESULT__ = function() {
-				return wtf8;
+				return utf8;
 			}.call(exports, __webpack_require__, exports, module), __WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
 		}	else if (freeExports && !freeExports.nodeType) {
 			if (freeModule) { // in Node.js or RingoJS v0.8.0+
-				freeModule.exports = wtf8;
+				freeModule.exports = utf8;
 			} else { // in Narwhal or RingoJS v0.7.0-
 				var object = {};
 				var hasOwnProperty = object.hasOwnProperty;
-				for (var key in wtf8) {
-					hasOwnProperty.call(wtf8, key) && (freeExports[key] = wtf8[key]);
+				for (var key in utf8) {
+					hasOwnProperty.call(utf8, key) && (freeExports[key] = utf8[key]);
 				}
 			}
 		} else { // in Rhino or a web browser
-			root.wtf8 = wtf8;
+			root.utf8 = utf8;
 		}
 	
 	}(this));
 	
 	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(51)(module), (function() { return this; }())))
-
-/***/ },
-/* 216 */
-/***/ function(module, exports) {
-
-	/*
-	 * base64-arraybuffer
-	 * https://github.com/niklasvh/base64-arraybuffer
-	 *
-	 * Copyright (c) 2012 Niklas von Hertzen
-	 * Licensed under the MIT license.
-	 */
-	(function(){
-	  "use strict";
-	
-	  var chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-	
-	  // Use a lookup table to find the index.
-	  var lookup = new Uint8Array(256);
-	  for (var i = 0; i < chars.length; i++) {
-	    lookup[chars.charCodeAt(i)] = i;
-	  }
-	
-	  exports.encode = function(arraybuffer) {
-	    var bytes = new Uint8Array(arraybuffer),
-	    i, len = bytes.length, base64 = "";
-	
-	    for (i = 0; i < len; i+=3) {
-	      base64 += chars[bytes[i] >> 2];
-	      base64 += chars[((bytes[i] & 3) << 4) | (bytes[i + 1] >> 4)];
-	      base64 += chars[((bytes[i + 1] & 15) << 2) | (bytes[i + 2] >> 6)];
-	      base64 += chars[bytes[i + 2] & 63];
-	    }
-	
-	    if ((len % 3) === 2) {
-	      base64 = base64.substring(0, base64.length - 1) + "=";
-	    } else if (len % 3 === 1) {
-	      base64 = base64.substring(0, base64.length - 2) + "==";
-	    }
-	
-	    return base64;
-	  };
-	
-	  exports.decode =  function(base64) {
-	    var bufferLength = base64.length * 0.75,
-	    len = base64.length, i, p = 0,
-	    encoded1, encoded2, encoded3, encoded4;
-	
-	    if (base64[base64.length - 1] === "=") {
-	      bufferLength--;
-	      if (base64[base64.length - 2] === "=") {
-	        bufferLength--;
-	      }
-	    }
-	
-	    var arraybuffer = new ArrayBuffer(bufferLength),
-	    bytes = new Uint8Array(arraybuffer);
-	
-	    for (i = 0; i < len; i+=4) {
-	      encoded1 = lookup[base64.charCodeAt(i)];
-	      encoded2 = lookup[base64.charCodeAt(i+1)];
-	      encoded3 = lookup[base64.charCodeAt(i+2)];
-	      encoded4 = lookup[base64.charCodeAt(i+3)];
-	
-	      bytes[p++] = (encoded1 << 2) | (encoded2 >> 4);
-	      bytes[p++] = ((encoded2 & 15) << 4) | (encoded3 >> 2);
-	      bytes[p++] = ((encoded3 & 3) << 6) | (encoded4 & 63);
-	    }
-	
-	    return arraybuffer;
-	  };
-	})();
-
 
 /***/ },
 /* 217 */
@@ -44520,175 +44126,6 @@
 
 /***/ },
 /* 218 */
-/***/ function(module, exports, __webpack_require__) {
-
-	
-	/**
-	 * Expose `Emitter`.
-	 */
-	
-	if (true) {
-	  module.exports = Emitter;
-	}
-	
-	/**
-	 * Initialize a new `Emitter`.
-	 *
-	 * @api public
-	 */
-	
-	function Emitter(obj) {
-	  if (obj) return mixin(obj);
-	};
-	
-	/**
-	 * Mixin the emitter properties.
-	 *
-	 * @param {Object} obj
-	 * @return {Object}
-	 * @api private
-	 */
-	
-	function mixin(obj) {
-	  for (var key in Emitter.prototype) {
-	    obj[key] = Emitter.prototype[key];
-	  }
-	  return obj;
-	}
-	
-	/**
-	 * Listen on the given `event` with `fn`.
-	 *
-	 * @param {String} event
-	 * @param {Function} fn
-	 * @return {Emitter}
-	 * @api public
-	 */
-	
-	Emitter.prototype.on =
-	Emitter.prototype.addEventListener = function(event, fn){
-	  this._callbacks = this._callbacks || {};
-	  (this._callbacks['$' + event] = this._callbacks['$' + event] || [])
-	    .push(fn);
-	  return this;
-	};
-	
-	/**
-	 * Adds an `event` listener that will be invoked a single
-	 * time then automatically removed.
-	 *
-	 * @param {String} event
-	 * @param {Function} fn
-	 * @return {Emitter}
-	 * @api public
-	 */
-	
-	Emitter.prototype.once = function(event, fn){
-	  function on() {
-	    this.off(event, on);
-	    fn.apply(this, arguments);
-	  }
-	
-	  on.fn = fn;
-	  this.on(event, on);
-	  return this;
-	};
-	
-	/**
-	 * Remove the given callback for `event` or all
-	 * registered callbacks.
-	 *
-	 * @param {String} event
-	 * @param {Function} fn
-	 * @return {Emitter}
-	 * @api public
-	 */
-	
-	Emitter.prototype.off =
-	Emitter.prototype.removeListener =
-	Emitter.prototype.removeAllListeners =
-	Emitter.prototype.removeEventListener = function(event, fn){
-	  this._callbacks = this._callbacks || {};
-	
-	  // all
-	  if (0 == arguments.length) {
-	    this._callbacks = {};
-	    return this;
-	  }
-	
-	  // specific event
-	  var callbacks = this._callbacks['$' + event];
-	  if (!callbacks) return this;
-	
-	  // remove all handlers
-	  if (1 == arguments.length) {
-	    delete this._callbacks['$' + event];
-	    return this;
-	  }
-	
-	  // remove specific handler
-	  var cb;
-	  for (var i = 0; i < callbacks.length; i++) {
-	    cb = callbacks[i];
-	    if (cb === fn || cb.fn === fn) {
-	      callbacks.splice(i, 1);
-	      break;
-	    }
-	  }
-	  return this;
-	};
-	
-	/**
-	 * Emit `event` with the given args.
-	 *
-	 * @param {String} event
-	 * @param {Mixed} ...
-	 * @return {Emitter}
-	 */
-	
-	Emitter.prototype.emit = function(event){
-	  this._callbacks = this._callbacks || {};
-	  var args = [].slice.call(arguments, 1)
-	    , callbacks = this._callbacks['$' + event];
-	
-	  if (callbacks) {
-	    callbacks = callbacks.slice(0);
-	    for (var i = 0, len = callbacks.length; i < len; ++i) {
-	      callbacks[i].apply(this, args);
-	    }
-	  }
-	
-	  return this;
-	};
-	
-	/**
-	 * Return array of callbacks for `event`.
-	 *
-	 * @param {String} event
-	 * @return {Array}
-	 * @api public
-	 */
-	
-	Emitter.prototype.listeners = function(event){
-	  this._callbacks = this._callbacks || {};
-	  return this._callbacks['$' + event] || [];
-	};
-	
-	/**
-	 * Check if this emitter has `event` handlers.
-	 *
-	 * @param {String} event
-	 * @return {Boolean}
-	 * @api public
-	 */
-	
-	Emitter.prototype.hasListeners = function(event){
-	  return !! this.listeners(event).length;
-	};
-
-
-/***/ },
-/* 219 */
 /***/ function(module, exports) {
 
 	/**
@@ -44731,7 +44168,7 @@
 
 
 /***/ },
-/* 220 */
+/* 219 */
 /***/ function(module, exports) {
 
 	
@@ -44743,7 +44180,7 @@
 	};
 
 /***/ },
-/* 221 */
+/* 220 */
 /***/ function(module, exports) {
 
 	'use strict';
@@ -44817,552 +44254,7 @@
 
 
 /***/ },
-/* 222 */
-/***/ function(module, exports, __webpack_require__) {
-
-	/* WEBPACK VAR INJECTION */(function(process) {
-	/**
-	 * This is the web browser implementation of `debug()`.
-	 *
-	 * Expose `debug()` as the module.
-	 */
-	
-	exports = module.exports = __webpack_require__(223);
-	exports.log = log;
-	exports.formatArgs = formatArgs;
-	exports.save = save;
-	exports.load = load;
-	exports.useColors = useColors;
-	exports.storage = 'undefined' != typeof chrome
-	               && 'undefined' != typeof chrome.storage
-	                  ? chrome.storage.local
-	                  : localstorage();
-	
-	/**
-	 * Colors.
-	 */
-	
-	exports.colors = [
-	  'lightseagreen',
-	  'forestgreen',
-	  'goldenrod',
-	  'dodgerblue',
-	  'darkorchid',
-	  'crimson'
-	];
-	
-	/**
-	 * Currently only WebKit-based Web Inspectors, Firefox >= v31,
-	 * and the Firebug extension (any Firefox version) are known
-	 * to support "%c" CSS customizations.
-	 *
-	 * TODO: add a `localStorage` variable to explicitly enable/disable colors
-	 */
-	
-	function useColors() {
-	  // is webkit? http://stackoverflow.com/a/16459606/376773
-	  // document is undefined in react-native: https://github.com/facebook/react-native/pull/1632
-	  return (typeof document !== 'undefined' && 'WebkitAppearance' in document.documentElement.style) ||
-	    // is firebug? http://stackoverflow.com/a/398120/376773
-	    (window.console && (console.firebug || (console.exception && console.table))) ||
-	    // is firefox >= v31?
-	    // https://developer.mozilla.org/en-US/docs/Tools/Web_Console#Styling_messages
-	    (navigator.userAgent.toLowerCase().match(/firefox\/(\d+)/) && parseInt(RegExp.$1, 10) >= 31);
-	}
-	
-	/**
-	 * Map %j to `JSON.stringify()`, since no Web Inspectors do that by default.
-	 */
-	
-	exports.formatters.j = function(v) {
-	  try {
-	    return JSON.stringify(v);
-	  } catch (err) {
-	    return '[UnexpectedJSONParseError]: ' + err.message;
-	  }
-	};
-	
-	
-	/**
-	 * Colorize log arguments if enabled.
-	 *
-	 * @api public
-	 */
-	
-	function formatArgs() {
-	  var args = arguments;
-	  var useColors = this.useColors;
-	
-	  args[0] = (useColors ? '%c' : '')
-	    + this.namespace
-	    + (useColors ? ' %c' : ' ')
-	    + args[0]
-	    + (useColors ? '%c ' : ' ')
-	    + '+' + exports.humanize(this.diff);
-	
-	  if (!useColors) return args;
-	
-	  var c = 'color: ' + this.color;
-	  args = [args[0], c, 'color: inherit'].concat(Array.prototype.slice.call(args, 1));
-	
-	  // the final "%c" is somewhat tricky, because there could be other
-	  // arguments passed either before or after the %c, so we need to
-	  // figure out the correct index to insert the CSS into
-	  var index = 0;
-	  var lastC = 0;
-	  args[0].replace(/%[a-z%]/g, function(match) {
-	    if ('%%' === match) return;
-	    index++;
-	    if ('%c' === match) {
-	      // we only are interested in the *last* %c
-	      // (the user may have provided their own)
-	      lastC = index;
-	    }
-	  });
-	
-	  args.splice(lastC, 0, c);
-	  return args;
-	}
-	
-	/**
-	 * Invokes `console.log()` when available.
-	 * No-op when `console.log` is not a "function".
-	 *
-	 * @api public
-	 */
-	
-	function log() {
-	  // this hackery is required for IE8/9, where
-	  // the `console.log` function doesn't have 'apply'
-	  return 'object' === typeof console
-	    && console.log
-	    && Function.prototype.apply.call(console.log, console, arguments);
-	}
-	
-	/**
-	 * Save `namespaces`.
-	 *
-	 * @param {String} namespaces
-	 * @api private
-	 */
-	
-	function save(namespaces) {
-	  try {
-	    if (null == namespaces) {
-	      exports.storage.removeItem('debug');
-	    } else {
-	      exports.storage.debug = namespaces;
-	    }
-	  } catch(e) {}
-	}
-	
-	/**
-	 * Load `namespaces`.
-	 *
-	 * @return {String} returns the previously persisted debug modes
-	 * @api private
-	 */
-	
-	function load() {
-	  var r;
-	  try {
-	    return exports.storage.debug;
-	  } catch(e) {}
-	
-	  // If debug isn't set in LS, and we're in Electron, try to load $DEBUG
-	  if (typeof process !== 'undefined' && 'env' in process) {
-	    return process.env.DEBUG;
-	  }
-	}
-	
-	/**
-	 * Enable namespaces listed in `localStorage.debug` initially.
-	 */
-	
-	exports.enable(load());
-	
-	/**
-	 * Localstorage attempts to return the localstorage.
-	 *
-	 * This is necessary because safari throws
-	 * when a user disables cookies/localstorage
-	 * and you attempt to access it.
-	 *
-	 * @return {LocalStorage}
-	 * @api private
-	 */
-	
-	function localstorage(){
-	  try {
-	    return window.localStorage;
-	  } catch (e) {}
-	}
-	
-	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(80)))
-
-/***/ },
-/* 223 */
-/***/ function(module, exports, __webpack_require__) {
-
-	
-	/**
-	 * This is the common logic for both the Node.js and web browser
-	 * implementations of `debug()`.
-	 *
-	 * Expose `debug()` as the module.
-	 */
-	
-	exports = module.exports = debug.debug = debug;
-	exports.coerce = coerce;
-	exports.disable = disable;
-	exports.enable = enable;
-	exports.enabled = enabled;
-	exports.humanize = __webpack_require__(224);
-	
-	/**
-	 * The currently active debug mode names, and names to skip.
-	 */
-	
-	exports.names = [];
-	exports.skips = [];
-	
-	/**
-	 * Map of special "%n" handling functions, for the debug "format" argument.
-	 *
-	 * Valid key names are a single, lowercased letter, i.e. "n".
-	 */
-	
-	exports.formatters = {};
-	
-	/**
-	 * Previously assigned color.
-	 */
-	
-	var prevColor = 0;
-	
-	/**
-	 * Previous log timestamp.
-	 */
-	
-	var prevTime;
-	
-	/**
-	 * Select a color.
-	 *
-	 * @return {Number}
-	 * @api private
-	 */
-	
-	function selectColor() {
-	  return exports.colors[prevColor++ % exports.colors.length];
-	}
-	
-	/**
-	 * Create a debugger with the given `namespace`.
-	 *
-	 * @param {String} namespace
-	 * @return {Function}
-	 * @api public
-	 */
-	
-	function debug(namespace) {
-	
-	  // define the `disabled` version
-	  function disabled() {
-	  }
-	  disabled.enabled = false;
-	
-	  // define the `enabled` version
-	  function enabled() {
-	
-	    var self = enabled;
-	
-	    // set `diff` timestamp
-	    var curr = +new Date();
-	    var ms = curr - (prevTime || curr);
-	    self.diff = ms;
-	    self.prev = prevTime;
-	    self.curr = curr;
-	    prevTime = curr;
-	
-	    // add the `color` if not set
-	    if (null == self.useColors) self.useColors = exports.useColors();
-	    if (null == self.color && self.useColors) self.color = selectColor();
-	
-	    var args = new Array(arguments.length);
-	    for (var i = 0; i < args.length; i++) {
-	      args[i] = arguments[i];
-	    }
-	
-	    args[0] = exports.coerce(args[0]);
-	
-	    if ('string' !== typeof args[0]) {
-	      // anything else let's inspect with %o
-	      args = ['%o'].concat(args);
-	    }
-	
-	    // apply any `formatters` transformations
-	    var index = 0;
-	    args[0] = args[0].replace(/%([a-z%])/g, function(match, format) {
-	      // if we encounter an escaped % then don't increase the array index
-	      if (match === '%%') return match;
-	      index++;
-	      var formatter = exports.formatters[format];
-	      if ('function' === typeof formatter) {
-	        var val = args[index];
-	        match = formatter.call(self, val);
-	
-	        // now we need to remove `args[index]` since it's inlined in the `format`
-	        args.splice(index, 1);
-	        index--;
-	      }
-	      return match;
-	    });
-	
-	    // apply env-specific formatting
-	    args = exports.formatArgs.apply(self, args);
-	
-	    var logFn = enabled.log || exports.log || console.log.bind(console);
-	    logFn.apply(self, args);
-	  }
-	  enabled.enabled = true;
-	
-	  var fn = exports.enabled(namespace) ? enabled : disabled;
-	
-	  fn.namespace = namespace;
-	
-	  return fn;
-	}
-	
-	/**
-	 * Enables a debug mode by namespaces. This can include modes
-	 * separated by a colon and wildcards.
-	 *
-	 * @param {String} namespaces
-	 * @api public
-	 */
-	
-	function enable(namespaces) {
-	  exports.save(namespaces);
-	
-	  var split = (namespaces || '').split(/[\s,]+/);
-	  var len = split.length;
-	
-	  for (var i = 0; i < len; i++) {
-	    if (!split[i]) continue; // ignore empty strings
-	    namespaces = split[i].replace(/[\\^$+?.()|[\]{}]/g, '\\$&').replace(/\*/g, '.*?');
-	    if (namespaces[0] === '-') {
-	      exports.skips.push(new RegExp('^' + namespaces.substr(1) + '$'));
-	    } else {
-	      exports.names.push(new RegExp('^' + namespaces + '$'));
-	    }
-	  }
-	}
-	
-	/**
-	 * Disable debug output.
-	 *
-	 * @api public
-	 */
-	
-	function disable() {
-	  exports.enable('');
-	}
-	
-	/**
-	 * Returns true if the given mode name is enabled, false otherwise.
-	 *
-	 * @param {String} name
-	 * @return {Boolean}
-	 * @api public
-	 */
-	
-	function enabled(name) {
-	  var i, len;
-	  for (i = 0, len = exports.skips.length; i < len; i++) {
-	    if (exports.skips[i].test(name)) {
-	      return false;
-	    }
-	  }
-	  for (i = 0, len = exports.names.length; i < len; i++) {
-	    if (exports.names[i].test(name)) {
-	      return true;
-	    }
-	  }
-	  return false;
-	}
-	
-	/**
-	 * Coerce `val`.
-	 *
-	 * @param {Mixed} val
-	 * @return {Mixed}
-	 * @api private
-	 */
-	
-	function coerce(val) {
-	  if (val instanceof Error) return val.stack || val.message;
-	  return val;
-	}
-
-
-/***/ },
-/* 224 */
-/***/ function(module, exports) {
-
-	/**
-	 * Helpers.
-	 */
-	
-	var s = 1000
-	var m = s * 60
-	var h = m * 60
-	var d = h * 24
-	var y = d * 365.25
-	
-	/**
-	 * Parse or format the given `val`.
-	 *
-	 * Options:
-	 *
-	 *  - `long` verbose formatting [false]
-	 *
-	 * @param {String|Number} val
-	 * @param {Object} options
-	 * @throws {Error} throw an error if val is not a non-empty string or a number
-	 * @return {String|Number}
-	 * @api public
-	 */
-	
-	module.exports = function (val, options) {
-	  options = options || {}
-	  var type = typeof val
-	  if (type === 'string' && val.length > 0) {
-	    return parse(val)
-	  } else if (type === 'number' && isNaN(val) === false) {
-	    return options.long ?
-				fmtLong(val) :
-				fmtShort(val)
-	  }
-	  throw new Error('val is not a non-empty string or a valid number. val=' + JSON.stringify(val))
-	}
-	
-	/**
-	 * Parse the given `str` and return milliseconds.
-	 *
-	 * @param {String} str
-	 * @return {Number}
-	 * @api private
-	 */
-	
-	function parse(str) {
-	  str = String(str)
-	  if (str.length > 10000) {
-	    return
-	  }
-	  var match = /^((?:\d+)?\.?\d+) *(milliseconds?|msecs?|ms|seconds?|secs?|s|minutes?|mins?|m|hours?|hrs?|h|days?|d|years?|yrs?|y)?$/i.exec(str)
-	  if (!match) {
-	    return
-	  }
-	  var n = parseFloat(match[1])
-	  var type = (match[2] || 'ms').toLowerCase()
-	  switch (type) {
-	    case 'years':
-	    case 'year':
-	    case 'yrs':
-	    case 'yr':
-	    case 'y':
-	      return n * y
-	    case 'days':
-	    case 'day':
-	    case 'd':
-	      return n * d
-	    case 'hours':
-	    case 'hour':
-	    case 'hrs':
-	    case 'hr':
-	    case 'h':
-	      return n * h
-	    case 'minutes':
-	    case 'minute':
-	    case 'mins':
-	    case 'min':
-	    case 'm':
-	      return n * m
-	    case 'seconds':
-	    case 'second':
-	    case 'secs':
-	    case 'sec':
-	    case 's':
-	      return n * s
-	    case 'milliseconds':
-	    case 'millisecond':
-	    case 'msecs':
-	    case 'msec':
-	    case 'ms':
-	      return n
-	    default:
-	      return undefined
-	  }
-	}
-	
-	/**
-	 * Short format for `ms`.
-	 *
-	 * @param {Number} ms
-	 * @return {String}
-	 * @api private
-	 */
-	
-	function fmtShort(ms) {
-	  if (ms >= d) {
-	    return Math.round(ms / d) + 'd'
-	  }
-	  if (ms >= h) {
-	    return Math.round(ms / h) + 'h'
-	  }
-	  if (ms >= m) {
-	    return Math.round(ms / m) + 'm'
-	  }
-	  if (ms >= s) {
-	    return Math.round(ms / s) + 's'
-	  }
-	  return ms + 'ms'
-	}
-	
-	/**
-	 * Long format for `ms`.
-	 *
-	 * @param {Number} ms
-	 * @return {String}
-	 * @api private
-	 */
-	
-	function fmtLong(ms) {
-	  return plural(ms, d, 'day') ||
-	    plural(ms, h, 'hour') ||
-	    plural(ms, m, 'minute') ||
-	    plural(ms, s, 'second') ||
-	    ms + ' ms'
-	}
-	
-	/**
-	 * Pluralization helper.
-	 */
-	
-	function plural(ms, n, name) {
-	  if (ms < n) {
-	    return
-	  }
-	  if (ms < n * 1.5) {
-	    return Math.floor(ms / n) + ' ' + name
-	  }
-	  return Math.ceil(ms / n) + ' ' + name + 's'
-	}
-
-
-/***/ },
-/* 225 */
+/* 221 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/* WEBPACK VAR INJECTION */(function(global) {
@@ -45371,7 +44263,7 @@
 	 */
 	
 	var Polling = __webpack_require__(208);
-	var inherit = __webpack_require__(220);
+	var inherit = __webpack_require__(219);
 	
 	/**
 	 * Module exports.
@@ -45391,6 +44283,12 @@
 	 */
 	
 	var callbacks;
+	
+	/**
+	 * Callbacks count.
+	 */
+	
+	var index = 0;
 	
 	/**
 	 * Noop.
@@ -45488,20 +44386,21 @@
 	
 	  script.async = true;
 	  script.src = this.uri();
-	  script.onerror = function (e) {
-	    self.onError('jsonp poll error', e);
+	  script.onerror = function(e){
+	    self.onError('jsonp poll error',e);
 	  };
 	
 	  var insertAt = document.getElementsByTagName('script')[0];
 	  if (insertAt) {
 	    insertAt.parentNode.insertBefore(script, insertAt);
-	  } else {
+	  }
+	  else {
 	    (document.head || document.body).appendChild(script);
 	  }
 	  this.script = script;
 	
-	  var isUAgecko = 'undefined' !== typeof navigator && /gecko/i.test(navigator.userAgent);
-	
+	  var isUAgecko = 'undefined' != typeof navigator && /gecko/i.test(navigator.userAgent);
+	  
 	  if (isUAgecko) {
 	    setTimeout(function () {
 	      var iframe = document.createElement('iframe');
@@ -45561,7 +44460,7 @@
 	
 	    try {
 	      // ie6 dynamic iframes with target="" support (thanks Chris Lambacher)
-	      var html = '<iframe src="javascript:0" name="' + self.iframeId + '">';
+	      var html = '<iframe src="javascript:0" name="'+ self.iframeId +'">';
 	      iframe = document.createElement(html);
 	    } catch (e) {
 	      iframe = document.createElement('iframe');
@@ -45584,11 +44483,11 @@
 	
 	  try {
 	    this.form.submit();
-	  } catch (e) {}
+	  } catch(e) {}
 	
 	  if (this.iframe.attachEvent) {
-	    this.iframe.onreadystatechange = function () {
-	      if (self.iframe.readyState === 'complete') {
+	    this.iframe.onreadystatechange = function(){
+	      if (self.iframe.readyState == 'complete') {
 	        complete();
 	      }
 	    };
@@ -45600,7 +44499,7 @@
 	/* WEBPACK VAR INJECTION */}.call(exports, (function() { return this; }())))
 
 /***/ },
-/* 226 */
+/* 222 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/* WEBPACK VAR INJECTION */(function(global) {/**
@@ -45609,17 +44508,11 @@
 	
 	var Transport = __webpack_require__(209);
 	var parser = __webpack_require__(210);
-	var parseqs = __webpack_require__(219);
-	var inherit = __webpack_require__(220);
-	var yeast = __webpack_require__(221);
-	var debug = __webpack_require__(222)('engine.io-client:websocket');
+	var parseqs = __webpack_require__(218);
+	var inherit = __webpack_require__(219);
+	var yeast = __webpack_require__(220);
+	var debug = __webpack_require__(190)('engine.io-client:websocket');
 	var BrowserWebSocket = global.WebSocket || global.MozWebSocket;
-	var NodeWebSocket;
-	if (typeof window === 'undefined') {
-	  try {
-	    NodeWebSocket = __webpack_require__(227);
-	  } catch (e) { }
-	}
 	
 	/**
 	 * Get either the `WebSocket` or `MozWebSocket` globals
@@ -45629,7 +44522,9 @@
 	
 	var WebSocket = BrowserWebSocket;
 	if (!WebSocket && typeof window === 'undefined') {
-	  WebSocket = NodeWebSocket;
+	  try {
+	    WebSocket = __webpack_require__(223);
+	  } catch (e) { }
 	}
 	
 	/**
@@ -45645,16 +44540,12 @@
 	 * @api public
 	 */
 	
-	function WS (opts) {
+	function WS(opts){
 	  var forceBase64 = (opts && opts.forceBase64);
 	  if (forceBase64) {
 	    this.supportsBinary = false;
 	  }
 	  this.perMessageDeflate = opts.perMessageDeflate;
-	  this.usingBrowserWebSocket = BrowserWebSocket && !opts.forceNode;
-	  if (!this.usingBrowserWebSocket) {
-	    WebSocket = NodeWebSocket;
-	  }
 	  Transport.call(this, opts);
 	}
 	
@@ -45684,14 +44575,15 @@
 	 * @api private
 	 */
 	
-	WS.prototype.doOpen = function () {
+	WS.prototype.doOpen = function(){
 	  if (!this.check()) {
 	    // let probe timeout
 	    return;
 	  }
 	
+	  var self = this;
 	  var uri = this.uri();
-	  var protocols = void (0);
+	  var protocols = void(0);
 	  var opts = {
 	    agent: this.agent,
 	    perMessageDeflate: this.perMessageDeflate
@@ -45708,15 +44600,8 @@
 	  if (this.extraHeaders) {
 	    opts.headers = this.extraHeaders;
 	  }
-	  if (this.localAddress) {
-	    opts.localAddress = this.localAddress;
-	  }
 	
-	  try {
-	    this.ws = this.usingBrowserWebSocket ? new WebSocket(uri) : new WebSocket(uri, protocols, opts);
-	  } catch (err) {
-	    return this.emit('error', err);
-	  }
+	  this.ws = BrowserWebSocket ? new WebSocket(uri) : new WebSocket(uri, protocols, opts);
 	
 	  if (this.ws.binaryType === undefined) {
 	    this.supportsBinary = false;
@@ -45724,7 +44609,7 @@
 	
 	  if (this.ws.supports && this.ws.supports.binary) {
 	    this.supportsBinary = true;
-	    this.ws.binaryType = 'nodebuffer';
+	    this.ws.binaryType = 'buffer';
 	  } else {
 	    this.ws.binaryType = 'arraybuffer';
 	  }
@@ -45738,22 +44623,39 @@
 	 * @api private
 	 */
 	
-	WS.prototype.addEventListeners = function () {
+	WS.prototype.addEventListeners = function(){
 	  var self = this;
 	
-	  this.ws.onopen = function () {
+	  this.ws.onopen = function(){
 	    self.onOpen();
 	  };
-	  this.ws.onclose = function () {
+	  this.ws.onclose = function(){
 	    self.onClose();
 	  };
-	  this.ws.onmessage = function (ev) {
+	  this.ws.onmessage = function(ev){
 	    self.onData(ev.data);
 	  };
-	  this.ws.onerror = function (e) {
+	  this.ws.onerror = function(e){
 	    self.onError('websocket error', e);
 	  };
 	};
+	
+	/**
+	 * Override `onData` to use a timer on iOS.
+	 * See: https://gist.github.com/mloughran/2052006
+	 *
+	 * @api private
+	 */
+	
+	if ('undefined' != typeof navigator
+	  && /iPad|iPhone|iPod/i.test(navigator.userAgent)) {
+	  WS.prototype.onData = function(data){
+	    var self = this;
+	    setTimeout(function(){
+	      Transport.prototype.onData.call(self, data);
+	    }, 0);
+	  };
+	}
 	
 	/**
 	 * Writes data to socket.
@@ -45762,7 +44664,7 @@
 	 * @api private
 	 */
 	
-	WS.prototype.write = function (packets) {
+	WS.prototype.write = function(packets){
 	  var self = this;
 	  this.writable = false;
 	
@@ -45770,9 +44672,9 @@
 	  // no need for encodePayload
 	  var total = packets.length;
 	  for (var i = 0, l = total; i < l; i++) {
-	    (function (packet) {
-	      parser.encodePacket(packet, self.supportsBinary, function (data) {
-	        if (!self.usingBrowserWebSocket) {
+	    (function(packet) {
+	      parser.encodePacket(packet, self.supportsBinary, function(data) {
+	        if (!BrowserWebSocket) {
 	          // always create a new object (GH-437)
 	          var opts = {};
 	          if (packet.options) {
@@ -45780,24 +44682,24 @@
 	          }
 	
 	          if (self.perMessageDeflate) {
-	            var len = 'string' === typeof data ? global.Buffer.byteLength(data) : data.length;
+	            var len = 'string' == typeof data ? global.Buffer.byteLength(data) : data.length;
 	            if (len < self.perMessageDeflate.threshold) {
 	              opts.compress = false;
 	            }
 	          }
 	        }
 	
-	        // Sometimes the websocket has already been closed but the browser didn't
-	        // have a chance of informing us about it yet, in that case send will
-	        // throw an error
+	        //Sometimes the websocket has already been closed but the browser didn't
+	        //have a chance of informing us about it yet, in that case send will
+	        //throw an error
 	        try {
-	          if (self.usingBrowserWebSocket) {
+	          if (BrowserWebSocket) {
 	            // TypeError is thrown when passing the second argument on Safari
 	            self.ws.send(data);
 	          } else {
 	            self.ws.send(data, opts);
 	          }
-	        } catch (e) {
+	        } catch (e){
 	          debug('websocket closed before onclose event');
 	        }
 	
@@ -45806,12 +44708,12 @@
 	    })(packets[i]);
 	  }
 	
-	  function done () {
+	  function done(){
 	    self.emit('flush');
 	
 	    // fake drain
 	    // defer to next tick to allow Socket to clear writeBuffer
-	    setTimeout(function () {
+	    setTimeout(function(){
 	      self.writable = true;
 	      self.emit('drain');
 	    }, 0);
@@ -45824,7 +44726,7 @@
 	 * @api private
 	 */
 	
-	WS.prototype.onClose = function () {
+	WS.prototype.onClose = function(){
 	  Transport.prototype.onClose.call(this);
 	};
 	
@@ -45834,7 +44736,7 @@
 	 * @api private
 	 */
 	
-	WS.prototype.doClose = function () {
+	WS.prototype.doClose = function(){
 	  if (typeof this.ws !== 'undefined') {
 	    this.ws.close();
 	  }
@@ -45846,14 +44748,14 @@
 	 * @api private
 	 */
 	
-	WS.prototype.uri = function () {
+	WS.prototype.uri = function(){
 	  var query = this.query || {};
 	  var schema = this.secure ? 'wss' : 'ws';
 	  var port = '';
 	
 	  // avoid port if default for schema
-	  if (this.port && (('wss' === schema && Number(this.port) !== 443) ||
-	    ('ws' === schema && Number(this.port) !== 80))) {
+	  if (this.port && (('wss' == schema && this.port != 443)
+	    || ('ws' == schema && this.port != 80))) {
 	    port = ':' + this.port;
 	  }
 	
@@ -45885,20 +44787,20 @@
 	 * @api public
 	 */
 	
-	WS.prototype.check = function () {
+	WS.prototype.check = function(){
 	  return !!WebSocket && !('__initialize' in WebSocket && this.name === WS.prototype.name);
 	};
 	
 	/* WEBPACK VAR INJECTION */}.call(exports, (function() { return this; }())))
 
 /***/ },
-/* 227 */
+/* 223 */
 /***/ function(module, exports) {
 
 	/* (ignored) */
 
 /***/ },
-/* 228 */
+/* 224 */
 /***/ function(module, exports) {
 
 	
@@ -45913,7 +44815,7 @@
 	};
 
 /***/ },
-/* 229 */
+/* 225 */
 /***/ function(module, exports) {
 
 	/* WEBPACK VAR INJECTION */(function(global) {/**
@@ -45951,7 +44853,7 @@
 	/* WEBPACK VAR INJECTION */}.call(exports, (function() { return this; }())))
 
 /***/ },
-/* 230 */
+/* 226 */
 /***/ function(module, exports, __webpack_require__) {
 
 	
@@ -45959,13 +44861,13 @@
 	 * Module dependencies.
 	 */
 	
-	var parser = __webpack_require__(190);
-	var Emitter = __webpack_require__(231);
-	var toArray = __webpack_require__(232);
-	var on = __webpack_require__(233);
-	var bind = __webpack_require__(234);
-	var debug = __webpack_require__(187)('socket.io-client:socket');
-	var hasBin = __webpack_require__(212);
+	var parser = __webpack_require__(193);
+	var Emitter = __webpack_require__(227);
+	var toArray = __webpack_require__(228);
+	var on = __webpack_require__(229);
+	var bind = __webpack_require__(230);
+	var debug = __webpack_require__(190)('socket.io-client:socket');
+	var hasBin = __webpack_require__(231);
 	
 	/**
 	 * Module exports.
@@ -46008,7 +44910,7 @@
 	 * @api public
 	 */
 	
-	function Socket (io, nsp, opts) {
+	function Socket(io, nsp){
 	  this.io = io;
 	  this.nsp = nsp;
 	  this.json = this; // compat
@@ -46018,9 +44920,6 @@
 	  this.sendBuffer = [];
 	  this.connected = false;
 	  this.disconnected = true;
-	  if (opts && opts.query) {
-	    this.query = opts.query;
-	  }
 	  if (this.io.autoConnect) this.open();
 	}
 	
@@ -46036,7 +44935,7 @@
 	 * @api private
 	 */
 	
-	Socket.prototype.subEvents = function () {
+	Socket.prototype.subEvents = function() {
 	  if (this.subs) return;
 	
 	  var io = this.io;
@@ -46054,12 +44953,12 @@
 	 */
 	
 	Socket.prototype.open =
-	Socket.prototype.connect = function () {
+	Socket.prototype.connect = function(){
 	  if (this.connected) return this;
 	
 	  this.subEvents();
 	  this.io.open(); // ensure open
-	  if ('open' === this.io.readyState) this.onopen();
+	  if ('open' == this.io.readyState) this.onopen();
 	  this.emit('connecting');
 	  return this;
 	};
@@ -46071,7 +44970,7 @@
 	 * @api public
 	 */
 	
-	Socket.prototype.send = function () {
+	Socket.prototype.send = function(){
 	  var args = toArray(arguments);
 	  args.unshift('message');
 	  this.emit.apply(this, args);
@@ -46087,7 +44986,7 @@
 	 * @api public
 	 */
 	
-	Socket.prototype.emit = function (ev) {
+	Socket.prototype.emit = function(ev){
 	  if (events.hasOwnProperty(ev)) {
 	    emit.apply(this, arguments);
 	    return this;
@@ -46102,7 +45001,7 @@
 	  packet.options.compress = !this.flags || false !== this.flags.compress;
 	
 	  // event ack callback
-	  if ('function' === typeof args[args.length - 1]) {
+	  if ('function' == typeof args[args.length - 1]) {
 	    debug('emitting packet with ack id %d', this.ids);
 	    this.acks[this.ids] = args.pop();
 	    packet.id = this.ids++;
@@ -46126,7 +45025,7 @@
 	 * @api private
 	 */
 	
-	Socket.prototype.packet = function (packet) {
+	Socket.prototype.packet = function(packet){
 	  packet.nsp = this.nsp;
 	  this.io.packet(packet);
 	};
@@ -46137,16 +45036,12 @@
 	 * @api private
 	 */
 	
-	Socket.prototype.onopen = function () {
+	Socket.prototype.onopen = function(){
 	  debug('transport is open - connecting');
 	
 	  // write connect packet if necessary
-	  if ('/' !== this.nsp) {
-	    if (this.query) {
-	      this.packet({type: parser.CONNECT, query: this.query});
-	    } else {
-	      this.packet({type: parser.CONNECT});
-	    }
+	  if ('/' != this.nsp) {
+	    this.packet({ type: parser.CONNECT });
 	  }
 	};
 	
@@ -46157,7 +45052,7 @@
 	 * @api private
 	 */
 	
-	Socket.prototype.onclose = function (reason) {
+	Socket.prototype.onclose = function(reason){
 	  debug('close (%s)', reason);
 	  this.connected = false;
 	  this.disconnected = true;
@@ -46172,8 +45067,8 @@
 	 * @api private
 	 */
 	
-	Socket.prototype.onpacket = function (packet) {
-	  if (packet.nsp !== this.nsp) return;
+	Socket.prototype.onpacket = function(packet){
+	  if (packet.nsp != this.nsp) return;
 	
 	  switch (packet.type) {
 	    case parser.CONNECT:
@@ -46213,7 +45108,7 @@
 	 * @api private
 	 */
 	
-	Socket.prototype.onevent = function (packet) {
+	Socket.prototype.onevent = function(packet){
 	  var args = packet.data || [];
 	  debug('emitting event %j', args);
 	
@@ -46235,10 +45130,10 @@
 	 * @api private
 	 */
 	
-	Socket.prototype.ack = function (id) {
+	Socket.prototype.ack = function(id){
 	  var self = this;
 	  var sent = false;
-	  return function () {
+	  return function(){
 	    // prevent double callbacks
 	    if (sent) return;
 	    sent = true;
@@ -46261,9 +45156,9 @@
 	 * @api private
 	 */
 	
-	Socket.prototype.onack = function (packet) {
+	Socket.prototype.onack = function(packet){
 	  var ack = this.acks[packet.id];
-	  if ('function' === typeof ack) {
+	  if ('function' == typeof ack) {
 	    debug('calling ack %s with %j', packet.id, packet.data);
 	    ack.apply(this, packet.data);
 	    delete this.acks[packet.id];
@@ -46278,7 +45173,7 @@
 	 * @api private
 	 */
 	
-	Socket.prototype.onconnect = function () {
+	Socket.prototype.onconnect = function(){
 	  this.connected = true;
 	  this.disconnected = false;
 	  this.emit('connect');
@@ -46291,7 +45186,7 @@
 	 * @api private
 	 */
 	
-	Socket.prototype.emitBuffered = function () {
+	Socket.prototype.emitBuffered = function(){
 	  var i;
 	  for (i = 0; i < this.receiveBuffer.length; i++) {
 	    emit.apply(this, this.receiveBuffer[i]);
@@ -46310,7 +45205,7 @@
 	 * @api private
 	 */
 	
-	Socket.prototype.ondisconnect = function () {
+	Socket.prototype.ondisconnect = function(){
 	  debug('server disconnect (%s)', this.nsp);
 	  this.destroy();
 	  this.onclose('io server disconnect');
@@ -46324,7 +45219,7 @@
 	 * @api private.
 	 */
 	
-	Socket.prototype.destroy = function () {
+	Socket.prototype.destroy = function(){
 	  if (this.subs) {
 	    // clean subscriptions to avoid reconnections
 	    for (var i = 0; i < this.subs.length; i++) {
@@ -46344,7 +45239,7 @@
 	 */
 	
 	Socket.prototype.close =
-	Socket.prototype.disconnect = function () {
+	Socket.prototype.disconnect = function(){
 	  if (this.connected) {
 	    debug('performing disconnect (%s)', this.nsp);
 	    this.packet({ type: parser.DISCONNECT });
@@ -46368,7 +45263,7 @@
 	 * @api public
 	 */
 	
-	Socket.prototype.compress = function (compress) {
+	Socket.prototype.compress = function(compress){
 	  this.flags = this.flags || {};
 	  this.flags.compress = compress;
 	  return this;
@@ -46376,17 +45271,15 @@
 
 
 /***/ },
-/* 231 */
-/***/ function(module, exports, __webpack_require__) {
+/* 227 */
+/***/ function(module, exports) {
 
 	
 	/**
 	 * Expose `Emitter`.
 	 */
 	
-	if (true) {
-	  module.exports = Emitter;
-	}
+	module.exports = Emitter;
 	
 	/**
 	 * Initialize a new `Emitter`.
@@ -46545,7 +45438,7 @@
 
 
 /***/ },
-/* 232 */
+/* 228 */
 /***/ function(module, exports) {
 
 	module.exports = toArray
@@ -46564,7 +45457,7 @@
 
 
 /***/ },
-/* 233 */
+/* 229 */
 /***/ function(module, exports) {
 
 	
@@ -46583,10 +45476,10 @@
 	 * @api public
 	 */
 	
-	function on (obj, ev, fn) {
+	function on(obj, ev, fn) {
 	  obj.on(ev, fn);
 	  return {
-	    destroy: function () {
+	    destroy: function(){
 	      obj.removeListener(ev, fn);
 	    }
 	  };
@@ -46594,7 +45487,7 @@
 
 
 /***/ },
-/* 234 */
+/* 230 */
 /***/ function(module, exports) {
 
 	/**
@@ -46623,7 +45516,73 @@
 
 
 /***/ },
-/* 235 */
+/* 231 */
+/***/ function(module, exports, __webpack_require__) {
+
+	/* WEBPACK VAR INJECTION */(function(global) {
+	/*
+	 * Module requirements.
+	 */
+	
+	var isArray = __webpack_require__(196);
+	
+	/**
+	 * Module exports.
+	 */
+	
+	module.exports = hasBinary;
+	
+	/**
+	 * Checks for binary data.
+	 *
+	 * Right now only Buffer and ArrayBuffer are supported..
+	 *
+	 * @param {Object} anything
+	 * @api public
+	 */
+	
+	function hasBinary(data) {
+	
+	  function _hasBinary(obj) {
+	    if (!obj) return false;
+	
+	    if ( (global.Buffer && global.Buffer.isBuffer && global.Buffer.isBuffer(obj)) ||
+	         (global.ArrayBuffer && obj instanceof ArrayBuffer) ||
+	         (global.Blob && obj instanceof Blob) ||
+	         (global.File && obj instanceof File)
+	        ) {
+	      return true;
+	    }
+	
+	    if (isArray(obj)) {
+	      for (var i = 0; i < obj.length; i++) {
+	          if (_hasBinary(obj[i])) {
+	              return true;
+	          }
+	      }
+	    } else if (obj && 'object' == typeof obj) {
+	      // see: https://github.com/Automattic/has-binary/pull/4
+	      if (obj.toJSON && 'function' == typeof obj.toJSON) {
+	        obj = obj.toJSON();
+	      }
+	
+	      for (var key in obj) {
+	        if (Object.prototype.hasOwnProperty.call(obj, key) && _hasBinary(obj[key])) {
+	          return true;
+	        }
+	      }
+	    }
+	
+	    return false;
+	  }
+	
+	  return _hasBinary(data);
+	}
+	
+	/* WEBPACK VAR INJECTION */}.call(exports, (function() { return this; }())))
+
+/***/ },
+/* 232 */
 /***/ function(module, exports) {
 
 	
@@ -46712,203 +45671,6 @@
 	};
 	
 
-
-/***/ },
-/* 236 */
-/***/ function(module, exports) {
-
-	module.exports = () => {
-	  var obj = {};
-	
-	  function add(x,y) {
-	    var key = x+":"+y;
-	    if(obj.hasOwnProperty(key)) {
-	      return false;
-	    } else {
-	      obj[key] = null;
-	      return true;
-	    }
-	  }
-	
-	  function remove(x,y) {
-	    var key = x+":"+y;
-	    if(obj.hasOwnProperty(key)) {
-	      delete obj[key];
-	      return  true;
-	    } else {
-	      return false;
-	    }
-	  }
-	
-	  function has(x,y) {
-	    var key = x+":"+y;
-	    return obj.hasOwnProperty(key);
-	  }
-	
-	  function list() {
-	    var arr = [];
-	    for(var key in obj) {
-	      arr.push(key.split(":"));
-	    }
-	    return arr;
-	  }
-	
-	  return {
-	    add : add,
-	    remove : remove,
-	    has : has,
-	    list : list
-	  };
-	};
-
-
-/***/ },
-/* 237 */
-/***/ function(module, exports, __webpack_require__) {
-
-	"use strict";
-	
-	var PIXI = __webpack_require__(2);
-	var players = __webpack_require__(238);
-	var playfield = __webpack_require__(1);
-	
-	var resolution = 64;
-	var renderer = new PIXI.WebGLRenderer(window.innerWidth, window.innerHeight);
-	var stage = new PIXI.Container();
-	
-	renderer.view.style.position = "absolute";
-	renderer.view.style.display = "block";
-	renderer.autoResize = true;
-	document.body.appendChild(renderer.view);
-	window.addEventListener("resize", resize);
-	
-	function status() {
-	  return {
-	    width: renderer.width,
-	    height: renderer.height,
-	    centerX: Math.round(renderer.width / 2),
-	    centerY: Math.round(renderer.height / 2)
-	  };
-	}
-	
-	function resize() {
-	  console.log("resize");
-	  renderer.resize(window.innerWidth, window.innerHeight);
-	  exports._status = status();
-	  players.center();
-	}
-	
-	function render() {
-	  //var time = Date.now();
-	  renderer.render(stage);
-	  //console.log("time",Date.now()-time);
-	};
-	
-	function add(container) {
-	  stage.addChild(stage);
-	}
-	
-	function remove(container) {
-	  stage.removeChild(container);
-	}
-	
-	function textures() {
-	  var textures = players.textures().concat(playfield.textures());
-	  return new Promise(function (resolve, reject) {
-	    PIXI.loader.add(textures).load(function () {
-	      resolve();
-	    });
-	  });
-	}
-	
-	module.exports = {
-	  _resolution: resolution,
-	  _status: status,
-	  render: render,
-	  add: add,
-	  remove: remove,
-	  ready: textures(),
-	  players: players,
-	  playfield: playfield
-	};
-
-/***/ },
-/* 238 */
-/***/ function(module, exports, __webpack_require__) {
-
-	"use strict";
-	
-	var PIXI = __webpack_require__(2);
-	var playfield = __webpack_require__(180);
-	
-	function textures() {
-	  return ["images/explorer.png"];
-	}
-	
-	var stage = new PIXI.Container();
-	var stats = {};
-	var sprites = {};
-	var base, me;
-	
-	function init(_base, _me) {
-	  base = _base;
-	  me = _me;
-	  base.add(stage);
-	}
-	
-	function center() {
-	  if (!stats.hasOwnProperty(me)) {
-	    stage.x = 0;
-	    stage.y = 0;
-	    base.playfield.center(0, 0);
-	  } else {
-	    stage.x = base.status.centerX - base._resolution / 2 - stats[me].x * base._resolution;
-	    stage.y = base.status.centerY - base._resolution / 2 - stats[me].y * base._resolution;
-	    base.playfield.center(stage.x, stage.y);
-	  }
-	}
-	
-	function update(player) {
-	  if (!sprites.hasOwnProperty(player.playerId)) {
-	    _add(player);
-	  } else {
-	    _update(player);
-	  }
-	  if (player.playerId === me) {
-	    center(player.stats.x, player.stats.y);
-	    base.playfield.center();
-	  }
-	}
-	
-	function getView(width, height, callback) {
-	  if (!stats.hasOwnProperty(me)) {
-	    return;
-	  }
-	  playfield.getView(width, height, stats[me].x, stats[me].y, stats[me].sight, callback);
-	}
-	
-	function _add(player) {
-	  var sprite = new PIXI.Sprite(PIXI.loader.resources["images/explorer.png"].texture);
-	  sprite.width = base._resolution;
-	  sprite.height = base._resolution;
-	  sprites[player.playerId] = sprite;
-	  _update(player);
-	  stage.addChild(sprite);
-	}
-	
-	function _update(player) {
-	  sprites[player.playerId].x = player.stats.x * base._resolution;
-	  sprites[player.playerId].y = player.stats.y * base._resolution;
-	  sprites[player.playerId] = player.stats;
-	}
-	
-	module.exports = {
-	  update: update,
-	  center: center,
-	  getView: getView,
-	  textures: textures,
-	  init: init
-	};
 
 /***/ }
 /******/ ]);

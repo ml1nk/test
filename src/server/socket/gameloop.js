@@ -4,6 +4,8 @@ var width = field.length;
 var height = field[0].length;
 
 var playfield = require("../../shared/playfield.js");
+var playersfunction = require("../../shared/player.js");
+
 var players = {};
 var playerCount = 0;
 var playerIdCounter = 0;
@@ -32,7 +34,7 @@ exports.add = (socket,fn) => {
       speed : speed,
       sight : sight
     },
-    playerId : playerIdCounter,
+    id : playerIdCounter,
     subField : subField,
     subPlayers : {}
   };
@@ -43,13 +45,12 @@ exports.add = (socket,fn) => {
       data : data,
       fn : fn
     };
-    console.log(tickPlayerCount,playerCount);
     if(tickPlayerCount == playerCount) {
       tickReady();
     }
   });
   fn({
-    playerId : playerIdCounter,
+    id : playerIdCounter,
     width : width,
     height : height
   });
@@ -71,15 +72,13 @@ exports.remove = (id) => {
 function tickReady() {
   var past = Date.now()-lastTick;
   if(past<=200) {
-    console.log("tick working", past);
+    console.log("tick:", past);
     setTimeout(tick,200-past);
   } else {
-    console.warn("tick take too long",past);
+    console.warn("tick:",past, "- too long");
     tick();
   }
 }
-
-
 
 function tick() {
   var key;
@@ -98,17 +97,35 @@ function tick() {
   }
 
   for(key in tickPlayerData) {
-    var tickData = {
-      fieldUpdates : playfield.getDiff(width, height, players[key].stats.x, players[key].stats.y, players[key].stats.sight, field, players[key].subField),
-    };
-    tickData.playerUpdates = [];
+
+    var data = playfield.getDiff(width, height, players[key].stats.x, players[key].stats.y, players[key].stats.sight, field, players[key].subField);
+    var playerChanges = [];
     for(var socketid in players) {
-      tickData.playerUpdates.push({
-        stats : players[socketid].stats,
-        playerId : players[socketid].playerId
-      });
+      var inside = data.inside.has(players[socketid].stats.x,players[socketid].stats.y);
+      if(inside && (!players[key].subPlayers.hasOwnProperty(socketid) || playersfunction.isChanged(players[key].subPlayers[socketid], players[socketid].stats))) {
+        players[key].subPlayers[socketid] = Object.assign({}, players[socketid].stats);
+        playerChanges.push({
+          stats : players[socketid].stats,
+          id : players[socketid].id
+        });
+      } else if(!inside && players[key].subPlayers.hasOwnProperty(socketid)) {
+        playerChanges.push({
+          stats : { x : -1, y : -1},
+          id : players[socketid].id
+        });
+        delete players[key].subPlayers[socketid];
+      }
     }
-    tickPlayerData[key].fn(tickData);
+    var tick = {};
+
+    if(data.diff.length>0) {
+      tick.field = data.diff;
+    }
+    if(playerChanges.length>0) {
+      tick.player = playerChanges;
+    }
+
+    tickPlayerData[key].fn(tick);
   }
 
   tickPlayerData = {};

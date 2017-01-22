@@ -19,19 +19,19 @@ function init(_base, _width, _height) {
     sprites.push(new Array(_height));
     types.push(new Array(_height).fill(0));
   }
+
   for(i=0; i<_width;i++) {
     for(p=0; p<_height; p++) {
         sprites[i][p] = _addField(i,p);
     }
   }
-
   base.add(stage);
 }
 
 function textures() {
   var textures = [];
   for(var i=0; i<fieldTypes.length; i++) {
-    if(i!=0) {
+    if(i!==0) {
       textures.push(fieldTypes[i].inside.texture);
     }
     textures.push(fieldTypes[i].outside.texture);
@@ -64,7 +64,7 @@ function update (x,y,type,_inside) {
   } else {
     inside.remove(x,y);
   }
-};
+}
 
 function insight () {
   var newInside = marker();
@@ -79,11 +79,11 @@ function insight () {
 
   var i, pos;
   for(i=0; i<nowOutside.length; i++) {
-    var pos = nowOutside[i];
+    pos = nowOutside[i];
     update(pos[0],pos[1],types[pos[0]][pos[1]],false);
   }
   for(i=0; i<nowInside.length; i++) {
-    var pos = nowInside[i];
+    pos = nowInside[i];
     update(pos[0],pos[1],types[pos[0]][pos[1]],true);
   }
   inside = newInside;

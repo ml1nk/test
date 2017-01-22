@@ -3,7 +3,7 @@ const players = require("./pixi/players.js");
 const playfield = require("./pixi/playfield.js");
 
 const resolution = 64;
-const renderer = new PIXI.WebGLRenderer(window.innerWidth, window.innerHeight);
+const renderer = new PIXI.autoDetectRenderer(window.innerWidth, window.innerHeight);
 const stage = new PIXI.Container();
 
 renderer.view.style.position = "absolute";
@@ -22,7 +22,6 @@ function status() {
 }
 
 function resize() {
-  console.log("resize");
   renderer.resize(window.innerWidth, window.innerHeight);
   exports._status = status();
   players.center();
@@ -32,10 +31,10 @@ function render() {
   //var time = Date.now();
   renderer.render(stage);
   //console.log("time",Date.now()-time);
-};
+}
 
 function add(container) {
-  stage.addChild(stage);
+  stage.addChild(container);
 }
 
 function remove(container) {
@@ -51,11 +50,11 @@ function textures() {
 
 module.exports = {
   _resolution : resolution,
-  _status : status,
+  _status : status(),
   render : render,
   add : add,
   remove : remove,
   ready : textures(),
   players : players,
   playfield : playfield
-}
+};

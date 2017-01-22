@@ -1,3 +1,5 @@
+const marker = require("./marker.js");
+
 exports.getView = (width,height,x,y,range,callback) => {
   var i,p,subRange,curX,curY;
   for(i=-range; i<=range; i++) {
@@ -18,7 +20,9 @@ exports.getView = (width,height,x,y,range,callback) => {
 
 exports.getDiff = (width, height, x, y, range, field, subField) => {
   var diff = [];
+  var inside = marker();
   exports.getView(width, height, x, y, range, (curX, curY) => {
+    inside.add(curX,curY);
     if(field[curX][curY] != subField[curX][curY]) {
       subField[curX][curY] = field[curX][curY];
       diff.push({
@@ -28,7 +32,10 @@ exports.getDiff = (width, height, x, y, range, field, subField) => {
       });
     }
   });
-  return diff;
+  return {
+    diff : diff,
+    inside : inside
+  };
 };
 
 exports.applyDiff = (field, diff) => {
