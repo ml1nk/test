@@ -1,5 +1,6 @@
 const marker = require("./marker.js");
 
+
 exports.getView = (width,height,x,y,range,callback) => {
   var i,p,subRange,curX,curY;
   for(i=-range; i<=range; i++) {
@@ -17,6 +18,24 @@ exports.getView = (width,height,x,y,range,callback) => {
     }
   }
 };
+
+/*
+exports.getView = (field, x, y, range, callback) => {
+  callback(x,y);
+  for(var i=1; i<=range; i++) {
+
+  }
+
+
+  function inRange(x,y) {
+    return (x>=0 && y>=0 && x<f)
+  }
+
+  function isTransparent(x,y) {
+
+  }
+
+};*/
 
 exports.getDiff = (width, height, x, y, range, field, subField) => {
   var diff = [];

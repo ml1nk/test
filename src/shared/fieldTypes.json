@@ -1,19 +1,13 @@
 [
   {
-    "left" : 1,
-    "right" : 1,
-    "top" : 1,
-    "bottom" : 1,
+    "transparent" : true,
     "outside" : {
       "texture" : "images/unknown.png",
       "rotation" : 0
     }
   },
   {
-    "left" : 1,
-    "right" : 1,
-    "top" : 1,
-    "bottom" : 1,
+    "transparent" : true,
     "inside" : {
       "texture" : "images/wood.png",
       "rotation" : 0
@@ -24,10 +18,7 @@
     }
   },
   {
-    "left" : 1,
-    "right" : 1,
-    "top" : 1,
-    "bottom" : 1,
+    "transparent" : true,
     "inside" : {
       "texture" : "images/stone.png",
       "rotation" : 0
@@ -38,10 +29,7 @@
     }
   },
   {
-    "left" : 1,
-    "right" : 1,
-    "top" : 1,
-    "bottom" : 1,
+    "transparent" : false,
     "inside" : {
       "texture" : "images/gras.png",
       "rotation" : 0
